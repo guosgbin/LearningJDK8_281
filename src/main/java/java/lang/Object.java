@@ -97,6 +97,13 @@ public class Object {
      * @see     java.lang.Object#equals(java.lang.Object)
      * @see     java.lang.System#identityHashCode
      */
+    /*
+     * 返回当前对象的哈希码
+     * 1. 在 Java 程序运行期间，该方法的必须返回相同的整数。前提是没有修改对象的 equals 方法，这个返回的整数无须在多次运行程
+     * 2. 如果两个对象的 equals(Object) 方法返回 true，两个对象调用 hashCode 方法的返回值一定相同。
+     * 3. 如果两个对象的 equals(Object) 方法返回 false，则不要求两个对象的 hashCode 方法产生不同的结果。
+     * 但是，程序员应该意识到，为不相等的对象生成不同的整数结果可能会提高哈希表的性能。
+     */
     public native int hashCode();
 
     /**
@@ -144,6 +151,16 @@ public class Object {
      *          argument; {@code false} otherwise.
      * @see     #hashCode()
      * @see     java.util.HashMap
+     */
+    /*
+     * - 对于任何非空引用 x, x.equals(x) 应该返回 true
+     * - 对于任何非空引用 x 和 y，假如 x.equals(y) 返回 true，那么 y.equals(x) 也返回 true
+     * - 对于任何非空引用 x、y 和 z，假如  x.equals(y) 返回 true，且 y.equals(z) 返回 true，那么 x.equals(z) 应该返回 true
+     * - 对于任何非空引用 x 和 y ，在没有修改对象上的equals比较中使用的数据的前提下， x.equals(y) 的多次调用始终返回 true 或 false
+     * - 对于任何非空引用 x, x.equals(null) 必须返回 false
+     *
+     * 判等，默认的实现只是简单地比较两个对象的引用。
+     * 每当重写此方法时，通常需要重写 hashCode 方法，以维护 hashCode 方法的约定，即相等的对象必须具有相等的哈希码。
      */
     public boolean equals(Object obj) {
         return (this == obj);
@@ -209,6 +226,10 @@ public class Object {
      *               be cloned.
      * @see java.lang.Cloneable
      */
+    /*
+     * 浅拷贝，使用时往往需要重写为public形式。
+     * 要求被克隆的对象所属的类实现Cloneable接口
+     */
     protected native Object clone() throws CloneNotSupportedException;
 
     /**
@@ -232,6 +253,7 @@ public class Object {
      *
      * @return  a string representation of the object.
      */
+    // 字符串化，通常需要重写
     public String toString() {
         return getClass().getName() + "@" + Integer.toHexString(hashCode());
     }
@@ -268,6 +290,11 @@ public class Object {
      * @see        java.lang.Object#notifyAll()
      * @see        java.lang.Object#wait()
      */
+    /*
+     * 唤醒一个在具有相同锁上 wait 等待的线程去争抢锁，假如有多个线程在等待，则随机唤醒一个。
+     * 注意：被唤醒的线程在争抢锁上没有任何优势
+     * 只能在同步代码里面调用
+     */
     public final native void notify();
 
     /**
@@ -291,6 +318,11 @@ public class Object {
      *               the owner of this object's monitor.
      * @see        java.lang.Object#notify()
      * @see        java.lang.Object#wait()
+     */
+    /*
+     * 唤醒所有具有相同锁的对象从wait状态进入争锁状态
+     * 注意：被唤醒的线程在争抢锁上没有任何优势
+     * 只能在同步代码里面调用
      */
     public final native void notifyAll();
 
@@ -379,6 +411,47 @@ public class Object {
      * @see        java.lang.Object#notify()
      * @see        java.lang.Object#notifyAll()
      */
+
+    /*
+     * 让当前线程等待，直到其他线程调用了 notify()， notifyAll() 方法唤醒， 或者是超时时间到了自动唤醒。
+     * 当前线程必须拥有该对象的监视器。
+     *
+     * 此方法使当前线程将自己置于该对象的 wait set 等待集中，然后放弃对该对象的所有同步声明。
+     * 当前线程处于休眠状态，直到发生以下四种情况之一：
+     * - 其他线程为此对象调用 notify 方法，而当前线程刚好是随机选择的被唤醒的线程。
+     * - 其他线程为此对象调用 notifyAll 方法。
+     * - 其他线程中调用当前线程的 interrupt() 方法，抛出此异常时清除当前线程的中断状态。
+     * - 等待已经超时。如果参数 timeout 为零，则不考虑等待时间，线程只是等待直到收到通知。
+     *
+     * 当前线程被其他线程唤醒后，将当前线程从该对象的 wait set 等待集中移除，并重新启用线程调度。
+     * 然后会同其他线程一起争抢锁，当重新获取锁的时候，它对对象的所有同步声明都会恢复到之前的状态，也就是恢复到调用 wait 方法时的状态。
+     * 因此，从wait方法返回时，对象和线程T的同步状态与调用wait方法时完全相同。
+     *
+     * 虚假唤醒
+     * 可以看 https://blog.51cto.com/u_3631118/3119794
+     *
+     * 线程也可以在没有被通知、中断或超时的情况下唤醒，即所谓的虚假唤醒。
+     * 虽然这在实践中很少发生，但应用程序必须通过测试应该导致线程被唤醒的条件来防范它，如果条件不满足则继续等待。
+     *
+     * 虚假唤醒(spurious wakeup)是指线程通过判断（如果是 if 判断），符合条件就进入阻塞，
+     * 当该线程被其他线程唤醒（在哪里阻塞就在哪里唤醒），就不会判断是否满足 if 条件，直接程序往下执行。
+     * 因为如果不符合 if 条件判断是不应该执行的，但是该线程却真实的执行了。
+     * 所以使用 if 条件判断进入 wait 阻塞被唤醒后可能出现虚假唤醒问题
+     *
+     * 换句话说，等待应该总是在循环中发生，就像这样：
+     * synchronized (obj) {
+     *         while (<condition does not hold>)
+     *             obj.wait(timeout);
+     *         ... // Perform action appropriate to condition
+     *     }
+     *
+     *
+     * 和 Thread.sleep 方法的区别是
+     * - wait 方法必须在同步代码里面使用，而 Thread.sleep 方法不需要
+     * - wait 方法会释放其持有的锁，而 Thread.sleep 不会释放其持有的锁
+     * - sleep 一般用于当前线程休眠，或者轮循暂停操作，wait 则多用于多线程之间的通信。
+     * - sleep 会让出 CPU 执行时间且强制上下文切换，而 wait 则不一定，wait 后可能还是有机会重新竞争到锁继续执行的。
+     */
     public final native void wait(long timeout) throws InterruptedException;
 
     /**
@@ -443,6 +516,11 @@ public class Object {
      *             status</i> of the current thread is cleared when
      *             this exception is thrown.
      */
+    /*
+     * 指定超时时间
+     *
+     * 纳秒没啥用， 有个判断 nanos > 0，就会将 timeout++
+     */
     public final void wait(long timeout, int nanos) throws InterruptedException {
         if (timeout < 0) {
             throw new IllegalArgumentException("timeout value is negative");
@@ -453,6 +531,7 @@ public class Object {
                                 "nanosecond timeout value out of range");
         }
 
+        // ... nanos > 0 就会将 timeout++
         if (nanos > 0) {
             timeout++;
         }
@@ -552,5 +631,6 @@ public class Object {
      * @see java.lang.ref.PhantomReference
      * @jls 12.6 Finalization of Class Instances
      */
+    // 对象在被垃圾回收的时候执行的清理操作，就会调一次这个方法
     protected void finalize() throws Throwable { }
 }
