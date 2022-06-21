@@ -176,10 +176,13 @@ class StringCoding {
     static char[] decode(String charsetName, byte[] ba, int off, int len)
         throws UnsupportedEncodingException
     {
+        // 获取当前线程的 StringDecoder
         StringDecoder sd = deref(decoder);
+        // 默认使用 ISO-8859-1 编码格式进行编码操作
         String csn = (charsetName == null) ? "ISO-8859-1" : charsetName;
         if ((sd == null) || !(csn.equals(sd.requestedCharsetName())
                               || csn.equals(sd.charsetName()))) {
+            // 创建 StringDecoder 对象，设置到线程本地缓存里
             sd = null;
             try {
                 Charset cs = lookupCharset(csn);

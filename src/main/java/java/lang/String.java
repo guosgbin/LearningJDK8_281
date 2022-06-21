@@ -108,12 +108,67 @@ import java.util.regex.PatternSyntaxException;
  * @since   JDK1.0
  */
 
+/*
+ * String 字符串是常量，其值在实例创建后就不能被修改，但字符串缓冲区支持可变的字符串，因为 String 对象是不可变的，所以它们可以被共享。
+ *
+ * String 对运算符 "+" 的重载，底层是通过 StringBuilder 或者 StringBuffer 的 append 方法
+ *
+ *
+ * String 类被 final 修饰，
+ * 修饰类：当用 final 修饰一个类时，表明这个类不能被继承。也就是说，String 类是不能被继承的，
+ * 修饰方法：把方法锁定，以防任何继承类修改它的含义。
+ * 修饰变量：修饰基本数据类型变量，则其数值一旦在初始化之后便不能更改；如果是引用类型的变量，则在对其初始化之后便不能再让其指向另一个对象。
+ *
+ *
+ * 什么是不可变类 ？
+ * Effective Java 中第 15 条 使可变性最小化 中对 不可变类 的解释：
+ * 不可变类只是其实例不能被修改的类。每个实例中包含的所有信息都必须在创建该实例的时候就提供，并且在对象的整个生命周期内固定不变。为了使类不可变，要遵循下面五条规则：
+ * 1. 不要提供任何会修改对象状态的方法。
+ * 2. 保证类不会被扩展。 一般的做法是让这个类称为 final 的，防止子类化，破坏该类的不可变行为。
+ * 3. 使所有的域都是 final 的。
+ * 4. 使所有的域都成为私有的。 防止客户端获得访问被域引用的可变对象的权限，并防止客户端直接修改这些对象。
+ * 5. 确保对于任何可变性组件的互斥访问。 如果类具有指向可变对象的域，则必须确保该类的客户端无法获得指向这些对象的引用。 *
+ *
+ *
+ * 对于 String 不可变的理解
+ * 1. String 类通过 final 修饰，不可被继承。
+ * 2. String 底层的 char[] 字符数组
+ *   2.1 字符数组是被 final 修饰的，所以这个字符数组的引用地址是不能更改的，但是这个数组的每个位置的元素是可以修改的。
+ *   2.2 因为字符数组的每个位置的元素是可以修改的，但是这个字符数组是 private 修饰的，而且这个字符数组没有对外提供 访问 和 修改 的方法
+ *       所以外部无法访问和修改这个字符数组，除非使用反射。
+ *
+ * 反射破坏
+ *  String str = "123";
+ *  System.out.println(str);
+ *  Field field = String.class.getDeclaredField("value");
+ *  field.setAccessible(true);
+ *  char[] value = (char[]) field.get(str);
+ *  value[1] = '3';
+ *
+ *
+ * 那么问题来了，String 为什么要设计成不可变的呢？
+ * https://www.programcreek.com/2013/04/why-string-is-immutable-in-java/?spm=a2c6h.12873639.article-detail.4.991724d43i3SSE
+ *
+ * 1. 在Java中，由于会大量的使用String常量，如果每一次声明一个String都创建一个String对象，那将会造成极大的空间资源的浪费。
+ *    Java提出了String pool的概念，在堆中开辟一块存储空间String pool，
+ *    当初始化一个String变量时，如果该字符串已经存在了，就不会去创建一个新的字符串变量，而是会返回已经存在了的字符串的引用。
+ *    如果字符串是可变的，某一个字符串变量改变了其值，那么其指向的变量的其他引用也会改变，String pool将无法实现
+ * 2. 字符串的哈希码在 Java 中经常使用。
+ *    例如，在 HashMap 或 HashSet 中。不可变保证哈希码始终相同，这意味着每次使用哈希码时都无需计算。这样更有效率。
+ * 3. String被许多的Java类(库)用来当做参数,例如 网络连接地址URL,文件路径path,还有反射机制所需要的String参数等,
+ *    如果字符串是可变的，黑客就有可能改变字符串指向对象的值，那么会引起很严重的安全问题。
+ * 4. 不可变对象自然是线程安全的。因为不可变对象不能改变，所以可以在多个线程之间自由共享。这消除了进行同步的要求。
+ *
+ * 总体来说，String不可变的原因要包括 设计考虑，效率优化，以及安全性这三大方面。
+ */
 public final class String
     implements java.io.Serializable, Comparable<String>, CharSequence {
     /** The value is used for character storage. */
+    // 用于存储字符， (JDK9 后的不再是这样存储了，用的是 byte 数组)
     private final char value[];
 
     /** Cache the hash code for the string */
+    // 字符串的哈希值
     private int hash; // Default to 0
 
     /** use serialVersionUID from JDK 1.0.2 for interoperability */
@@ -126,6 +181,7 @@ public final class String
      * <a href="{@docRoot}/../platform/serialization/spec/output.html">
      * Object Serialization Specification, Section 6.2, "Stream Elements"</a>
      */
+    // 存储对象的序列化信息
     private static final ObjectStreamField[] serialPersistentFields =
         new ObjectStreamField[0];
 
@@ -133,6 +189,9 @@ public final class String
      * Initializes a newly created {@code String} object so that it represents
      * an empty character sequence.  Note that use of this constructor is
      * unnecessary since Strings are immutable.
+     */
+    /*
+     * 构造空串
      */
     public String() {
         this.value = "".value;
@@ -148,6 +207,9 @@ public final class String
      * @param  original
      *         A {@code String}
      */
+    /*
+     * 构造 String 的副本（哈希值都一样）
+     */
     public String(String original) {
         this.value = original.value;
         this.hash = original.hash;
@@ -162,6 +224,7 @@ public final class String
      * @param  value
      *         The initial value of the string
      */
+    // 复制字符，源数组的内容被复制，随后对源字符数组的修改不会影响新创建的字符串
     public String(char value[]) {
         this.value = Arrays.copyOf(value, value.length);
     }
@@ -187,6 +250,7 @@ public final class String
      *          If the {@code offset} and {@code count} arguments index
      *          characters outside the bounds of the {@code value} array
      */
+    // 子数组的内容被复制，随后对字符数组的修改不会影响新创建的字符串
     public String(char value[], int offset, int count) {
         if (offset < 0) {
             throw new StringIndexOutOfBoundsException(offset);
@@ -235,6 +299,7 @@ public final class String
      *
      * @since  1.5
      */
+    // TODO-KWOK 没看懂干嘛的
     public String(int[] codePoints, int offset, int count) {
         if (offset < 0) {
             throw new StringIndexOutOfBoundsException(offset);
@@ -973,6 +1038,10 @@ public final class String
      * @see  #compareTo(String)
      * @see  #equalsIgnoreCase(String)
      */
+    /*
+     * 先判断两个对象的地址是否相等，假如地址相等直接返回 true
+     * 假如传入参数是 String 类型，则遍历两个字符串的 char[] 挨个比较
+     */
     public boolean equals(Object anObject) {
         if (this == anObject) {
             return true;
@@ -1461,6 +1530,13 @@ public final class String
      * (The hash value of the empty string is zero.)
      *
      * @return  a hash code value for this object.
+     */
+    /*
+     * 字符串的哈希码值为：
+     * s[0]*31^(n-1) + s[1]*31^(n-2) + ... + s[n-1]
+     *
+     * 其中 s[i] 是字符串的第 i 个字符， n 是字符串的长度， ^ 表示求幂。
+     * （空字符串的哈希值为 0）
      */
     public int hashCode() {
         int h = hash;
@@ -3147,8 +3223,8 @@ public final class String
      * A pool of strings, initially empty, is maintained privately by the
      * class {@code String}.
      * <p>
-     * When the intern method is invoked, if the pool already contains a
-     * string equal to this {@code String} object as determined by
+     * sWhen the intern method is invoked, if the pool already contains a
+     * tring equal to this {@code String} object as determined by
      * the {@link #equals(Object)} method, then the string from the pool is
      * returned. Otherwise, this {@code String} object is added to the
      * pool and a reference to this {@code String} object is returned.
@@ -3163,6 +3239,13 @@ public final class String
      *
      * @return  a string that has the same contents as this string, but is
      *          guaranteed to be from a pool of unique strings.
+     */
+    /*
+     * 返回一个当前 String 的一个固定表示形式。
+     * String 的常量池，初始化为空，被当前类维护。
+     * 当此方法被调用的时候，如果常量池中包含有跟当前 String 值相等的常量，这个常量就会被返回。
+     * 否则，当前 String 的值就会被加入常量池，然后返回当前 String 的引用。
+     * 因此，对于任何两个字符串 s 和 t，当且仅当 s.equals(t) 为 true 时， s.intern() == t.intern() 才为 true
      */
     public native String intern();
 }
