@@ -161,6 +161,8 @@ import java.util.regex.PatternSyntaxException;
  *
  * 总体来说，String不可变的原因要包括 设计考虑，效率优化，以及安全性这三大方面。
  */
+
+// TODO-KWOK 需要重新细致查看源码，暂时略过
 public final class String
     implements java.io.Serializable, Comparable<String>, CharSequence {
     /** The value is used for character storage. */
@@ -1818,17 +1820,18 @@ public final class String
      * source is the character array being searched, and the target
      * is the string being searched for.
      *
-     * @param   source       the characters being searched.
-     * @param   sourceOffset offset of the source string.
-     * @param   sourceCount  count of the source string.
-     * @param   target       the characters being searched for.
-     * @param   targetOffset offset of the target string.
-     * @param   targetCount  count of the target string.
-     * @param   fromIndex    the index to begin searching from.
+     * @param   source       the characters being searched. 被查找的源数组
+     * @param   sourceOffset offset of the source string. 被查找的源数组偏移量
+     * @param   sourceCount  count of the source string. 被查找的源数组的有效位数
+     * @param   target       the characters being searched for. 待查找的数组
+     * @param   targetOffset offset of the target string. 待查找的数组偏移量
+     * @param   targetCount  count of the target string. 待查找的数组的有效位数
+     * @param   fromIndex    the index to begin searching from. 被查找的源数组，从 sourceOffset + fromIndex 开始查找
      */
     static int indexOf(char[] source, int sourceOffset, int sourceCount,
             char[] target, int targetOffset, int targetCount,
             int fromIndex) {
+        // TODO-KWOK ???
         if (fromIndex >= sourceCount) {
             return (targetCount == 0 ? sourceCount : -1);
         }
@@ -1839,23 +1842,29 @@ public final class String
             return fromIndex;
         }
 
+        // 要匹配的字符串的第一个 char
         char first = target[targetOffset];
         int max = sourceOffset + (sourceCount - targetCount);
 
+        // sourceOffset + fromIndex  1 开始找 i<=8
         for (int i = sourceOffset + fromIndex; i <= max; i++) {
             /* Look for first character. */
             if (source[i] != first) {
                 while (++i <= max && source[i] != first);
             }
+            // 走到此处说明匹配到了第一个字符
 
             /* Found first character, now look at the rest of v2 */
             if (i <= max) {
+                // j 指向第二个位置
                 int j = i + 1;
+                // 最后一个要匹配的元素的位置
                 int end = j + targetCount - 1;
                 for (int k = targetOffset + 1; j < end && source[j]
                         == target[k]; j++, k++);
 
                 if (j == end) {
+                    // 说明匹配成功
                     /* Found whole string. */
                     return i - sourceOffset;
                 }

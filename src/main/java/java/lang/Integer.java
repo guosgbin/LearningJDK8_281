@@ -468,6 +468,9 @@ public final class Integer extends Number implements Comparable<Integer> {
                                       99999999, 999999999, Integer.MAX_VALUE };
 
     // Requires positive x
+    /*
+     * 统计传入整数的数字位数， eg. 123 是 3
+     */
     static int stringSize(int x) {
         for (int i=0; ; i++)
             if (x <= sizeTable[i])
