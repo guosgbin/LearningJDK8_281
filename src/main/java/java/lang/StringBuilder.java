@@ -73,6 +73,9 @@ package java.lang;
  * @see         java.lang.String
  * @since       1.5
  */
+/*
+ * 可变的字符序列。此类提供与 StringBuffer 兼容的 API，但不保证同步。
+ */
 public final class StringBuilder
     extends AbstractStringBuilder
     implements java.io.Serializable, CharSequence
@@ -85,6 +88,7 @@ public final class StringBuilder
      * Constructs a string builder with no characters in it and an
      * initial capacity of 16 characters.
      */
+    // 默认初始容量 16
     public StringBuilder() {
         super(16);
     }
@@ -108,6 +112,7 @@ public final class StringBuilder
      *
      * @param   str   the initial contents of the buffer.
      */
+    // 容量 str.length() + 16
     public StringBuilder(String str) {
         super(str.length() + 16);
         append(str);
@@ -404,8 +409,12 @@ public final class StringBuilder
     @Override
     public String toString() {
         // Create a copy, don't share the array
+        // 创建一个新的字符串
         return new String(value, 0, count);
     }
+
+
+    //////////////////// 序列化相关 ////////////////////
 
     /**
      * Save the state of the {@code StringBuilder} instance to a stream

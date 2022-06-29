@@ -107,7 +107,8 @@ import java.util.Arrays;
      * A cache of the last value returned by toString. Cleared
      * whenever the StringBuffer is modified.
      */
-    // StringBuffer 被修改后就会情况这个 char 数组
+    // 调用 toString() 后生成的缓存，用于存储 StringBuffer 中的字符序列
+    // StringBuffer 被修改后就会清空这个 char 数组
     private transient char[] toStringCache;
 
     /** use serialVersionUID from JDK 1.0.2 for interoperability */
@@ -680,6 +681,7 @@ import java.util.Arrays;
         if (toStringCache == null) {
             toStringCache = Arrays.copyOfRange(value, 0, count);
         }
+        // 返回一个新的字符串
         return new String(toStringCache, true);
     }
 
