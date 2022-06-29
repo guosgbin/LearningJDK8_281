@@ -94,6 +94,10 @@ import java.util.Arrays;
  * @see     java.lang.String
  * @since   JDK1.0
  */
+/*
+ * 线程安全的字符序列，内部就是一个 char 数组
+ * 线程安全是因为所有修改 StringBuffer 的操作都被 synchronized 修饰了
+ */
  public final class StringBuffer
     extends AbstractStringBuilder
     implements java.io.Serializable, CharSequence
@@ -103,6 +107,7 @@ import java.util.Arrays;
      * A cache of the last value returned by toString. Cleared
      * whenever the StringBuffer is modified.
      */
+    // StringBuffer 被修改后就会情况这个 char 数组
     private transient char[] toStringCache;
 
     /** use serialVersionUID from JDK 1.0.2 for interoperability */
@@ -112,6 +117,7 @@ import java.util.Arrays;
      * Constructs a string buffer with no characters in it and an
      * initial capacity of 16 characters.
      */
+    // 默认初始容量 16
     public StringBuffer() {
         super(16);
     }
@@ -135,6 +141,7 @@ import java.util.Arrays;
      *
      * @param   str   the initial contents of the buffer.
      */
+    // 初始化容量是 str.length() + 16
     public StringBuffer(String str) {
         super(str.length() + 16);
         append(str);
@@ -158,11 +165,13 @@ import java.util.Arrays;
         append(seq);
     }
 
+    // 包含 char 的个数
     @Override
     public synchronized int length() {
         return count;
     }
 
+    // StringBuffer 的容量
     @Override
     public synchronized int capacity() {
         return value.length;
@@ -203,6 +212,7 @@ import java.util.Arrays;
         return value[index];
     }
 
+    /////////////// 码点操作 开始 ///////////////
     /**
      * @since      1.5
      */
@@ -234,10 +244,12 @@ import java.util.Arrays;
     public synchronized int offsetByCodePoints(int index, int codePointOffset) {
         return super.offsetByCodePoints(index, codePointOffset);
     }
+    /////////////// 码点操作 结束 ///////////////
 
     /**
      * @throws IndexOutOfBoundsException {@inheritDoc}
      */
+    // StringBuffer 的 [srcBegin, srcEnd) 复制到 dst 的 dstBegin 后
     @Override
     public synchronized void getChars(int srcBegin, int srcEnd, char[] dst,
                                       int dstBegin)
@@ -671,6 +683,7 @@ import java.util.Arrays;
         return new String(toStringCache, true);
     }
 
+    /////////////// 序列化操作 开始 ///////////////
     /**
      * Serializable fields for StringBuffer.
      *
@@ -712,4 +725,5 @@ import java.util.Arrays;
         value = (char[])fields.get("value", null);
         count = fields.get("count", 0);
     }
+    /////////////// 序列化操作 结束 ///////////////
 }
