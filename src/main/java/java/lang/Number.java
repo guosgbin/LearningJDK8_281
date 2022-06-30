@@ -52,6 +52,7 @@ package java.lang;
  * @jls 5.1.3 Narrowing Primitive Conversions
  * @since   JDK1.0
  */
+// 一些数值类 的父类
 public abstract class Number implements java.io.Serializable {
     /**
      * Returns the value of the specified number as an {@code int},
@@ -60,6 +61,7 @@ public abstract class Number implements java.io.Serializable {
      * @return  the numeric value represented by this object after conversion
      *          to type {@code int}.
      */
+    // 转换为 int 值，可能会出现四舍五入和截断
     public abstract int intValue();
 
     /**
@@ -69,6 +71,7 @@ public abstract class Number implements java.io.Serializable {
      * @return  the numeric value represented by this object after conversion
      *          to type {@code long}.
      */
+    // 转换为 long 值，可能会出现四舍五入和截断
     public abstract long longValue();
 
     /**
@@ -78,6 +81,7 @@ public abstract class Number implements java.io.Serializable {
      * @return  the numeric value represented by this object after conversion
      *          to type {@code float}.
      */
+    // 转换为 float，可能会出现四舍五入
     public abstract float floatValue();
 
     /**
@@ -87,6 +91,7 @@ public abstract class Number implements java.io.Serializable {
      * @return  the numeric value represented by this object after conversion
      *          to type {@code double}.
      */
+    // 转换为 double，可能会出现四舍五入
     public abstract double doubleValue();
 
     /**
@@ -100,6 +105,7 @@ public abstract class Number implements java.io.Serializable {
      *          to type {@code byte}.
      * @since   JDK1.1
      */
+    // 转换为 byte，可能会出现四舍五入和截断
     public byte byteValue() {
         return (byte)intValue();
     }
@@ -115,6 +121,7 @@ public abstract class Number implements java.io.Serializable {
      *          to type {@code short}.
      * @since   JDK1.1
      */
+    // 转换为 short，可能会出现四舍五入和截断
     public short shortValue() {
         return (short)intValue();
     }
