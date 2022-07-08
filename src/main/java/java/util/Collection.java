@@ -151,6 +151,7 @@ public interface Collection<E> extends Iterable<E> {
      *
      * @return the number of elements in this collection
      */
+    // 返回集合内元素个数
     int size();
 
     /**
@@ -158,6 +159,7 @@ public interface Collection<E> extends Iterable<E> {
      *
      * @return <tt>true</tt> if this collection contains no elements
      */
+    // 判空
     boolean isEmpty();
 
     /**
@@ -176,6 +178,7 @@ public interface Collection<E> extends Iterable<E> {
      *         collection does not permit null elements
      *         (<a href="#optional-restrictions">optional</a>)
      */
+    // 集合是否包含指定元素
     boolean contains(Object o);
 
     /**
@@ -186,6 +189,7 @@ public interface Collection<E> extends Iterable<E> {
      *
      * @return an <tt>Iterator</tt> over the elements in this collection
      */
+    // 返回集合的迭代器
     Iterator<E> iterator();
 
     /**
@@ -204,6 +208,7 @@ public interface Collection<E> extends Iterable<E> {
      *
      * @return an array containing all of the elements in this collection
      */
+    // 集合转换为数组
     Object[] toArray();
 
     /**
@@ -249,6 +254,7 @@ public interface Collection<E> extends Iterable<E> {
      *         this collection
      * @throws NullPointerException if the specified array is null
      */
+    // 集合转换为数组，指定泛型
     <T> T[] toArray(T[] a);
 
     // Modification Operations
@@ -286,6 +292,7 @@ public interface Collection<E> extends Iterable<E> {
      * @throws IllegalStateException if the element cannot be added at this
      *         time due to insertion restrictions
      */
+    // 添加元素
     boolean add(E e);
 
     /**
@@ -308,6 +315,7 @@ public interface Collection<E> extends Iterable<E> {
      * @throws UnsupportedOperationException if the <tt>remove</tt> operation
      *         is not supported by this collection
      */
+    // 移除元素
     boolean remove(Object o);
 
 
@@ -331,6 +339,7 @@ public interface Collection<E> extends Iterable<E> {
      *         or if the specified collection is null.
      * @see    #contains(Object)
      */
+    // 是否包含指定集合中的所有元素
     boolean containsAll(Collection<?> c);
 
     /**
@@ -357,6 +366,7 @@ public interface Collection<E> extends Iterable<E> {
      *         this time due to insertion restrictions
      * @see #add(Object)
      */
+    // 添加集合 c 中的所有元素
     boolean addAll(Collection<? extends E> c);
 
     /**
@@ -382,6 +392,7 @@ public interface Collection<E> extends Iterable<E> {
      * @see #remove(Object)
      * @see #contains(Object)
      */
+    // 移除当前集合中 包含集合 c 的所有元素
     boolean removeAll(Collection<?> c);
 
     /**
@@ -406,6 +417,7 @@ public interface Collection<E> extends Iterable<E> {
      *         supported.
      * @since 1.8
      */
+    // 遍历集合中的元素，满足 Predicate#test 的元素就删除
     default boolean removeIf(Predicate<? super E> filter) {
         Objects.requireNonNull(filter);
         boolean removed = false;
@@ -441,6 +453,7 @@ public interface Collection<E> extends Iterable<E> {
      * @see #remove(Object)
      * @see #contains(Object)
      */
+    // 从当前集合中移除所有不包含在集合 c 中的元素。
     boolean retainAll(Collection<?> c);
 
     /**
@@ -450,6 +463,7 @@ public interface Collection<E> extends Iterable<E> {
      * @throws UnsupportedOperationException if the <tt>clear</tt> operation
      *         is not supported by this collection
      */
+    // 清空当前集合
     void clear();
 
 
@@ -557,6 +571,7 @@ public interface Collection<E> extends Iterable<E> {
      * @return a {@code Spliterator} over the elements in this collection
      * @since 1.8
      */
+    // TODO-KWOK 以后再看
     @Override
     default Spliterator<E> spliterator() {
         return Spliterators.spliterator(this, 0);
@@ -577,6 +592,7 @@ public interface Collection<E> extends Iterable<E> {
      * @return a sequential {@code Stream} over the elements in this collection
      * @since 1.8
      */
+    // 返回的当前集合转换后的流对象
     default Stream<E> stream() {
         return StreamSupport.stream(spliterator(), false);
     }
@@ -598,6 +614,7 @@ public interface Collection<E> extends Iterable<E> {
      * collection
      * @since 1.8
      */
+    // 返回的当前集合转换后的流对象   并行流
     default Stream<E> parallelStream() {
         return StreamSupport.stream(spliterator(), true);
     }

@@ -141,6 +141,18 @@ package java.util;
  * @author Doug Lea
  * @param <E> the type of elements held in this collection
  */
+
+/*
+ * 这些方法中的每一个都以两种形式存在：
+ *      一种在操作失败时抛出异常，
+ *      另一种返回特殊值，null 或 false，具体取决于不同的实现
+ *
+ *           抛出异常        返回特殊值
+ * 插入       add(e)          offer(e)
+ * 删除       remove()        poll()
+ * 返回队首    element()       peek()
+ *
+ */
 public interface Queue<E> extends Collection<E> {
     /**
      * Inserts the specified element into this queue if it is possible to do so
@@ -159,6 +171,7 @@ public interface Queue<E> extends Collection<E> {
      * @throws IllegalArgumentException if some property of this element
      *         prevents it from being added to this queue
      */
+    // 添加元素
     boolean add(E e);
 
     /**
@@ -178,6 +191,7 @@ public interface Queue<E> extends Collection<E> {
      * @throws IllegalArgumentException if some property of this element
      *         prevents it from being added to this queue
      */
+    // 添加元素
     boolean offer(E e);
 
     /**
@@ -188,6 +202,7 @@ public interface Queue<E> extends Collection<E> {
      * @return the head of this queue
      * @throws NoSuchElementException if this queue is empty
      */
+    // 移除队首，队列为空抛出异常
     E remove();
 
     /**
@@ -196,6 +211,7 @@ public interface Queue<E> extends Collection<E> {
      *
      * @return the head of this queue, or {@code null} if this queue is empty
      */
+    // 移除队首，队列为空返回 null
     E poll();
 
     /**
@@ -206,6 +222,7 @@ public interface Queue<E> extends Collection<E> {
      * @return the head of this queue
      * @throws NoSuchElementException if this queue is empty
      */
+    // 获取队首元素，但不移除。当队列为空时抛出异常
     E element();
 
     /**
@@ -214,5 +231,6 @@ public interface Queue<E> extends Collection<E> {
      *
      * @return the head of this queue, or {@code null} if this queue is empty
      */
+    // 获取队首元素，但不移除。当队列为空时返回 null
     E peek();
 }

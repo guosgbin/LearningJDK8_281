@@ -190,6 +190,41 @@ package java.util;
  * @since  1.6
  * @param <E> the type of elements held in this collection
  */
+
+/*
+ * 双端队列
+ * The name <i>deque</i> is short for "double ended queue" and is usually pronounced "deck".
+ *
+ * ===============================================================
+ *          抛出异常       返回特殊值      抛出异常       返回特殊值
+ * Insert   addFirst(e)  offerFirst(e)  addLast(e)    offerLast(e)
+ * Remove   emoveFirst() pollFirst()    removeLast()  pollLast()
+ * Examine  getFirst()   peekFirst()    getLast(}     peekLast()
+ * ===============================================================
+ *
+ *
+ * ===========================
+ * 扩展了 Queue 接口，用作 FIFO 时
+ * ===========================
+ * Queue 方法    等效 Deque 方法
+ * add(e)       addLast(e)
+ * offer(e)     offerLast(e)
+ * remove()     removeFirst()
+ * poll()       pollFirst()
+ * element()    getFirst()
+ * peek()       peekFirst()
+ * ===========================
+ *
+ *
+ * ===========================
+ * 用作 LIFO 时
+ * ===========================
+ * 堆栈方法      等效 Deque 方法
+ * push(e)      addFirst(e)
+ * pop(e)       removeFirst()
+ * peek()       peelFirst()
+ * ===========================
+ */
 public interface Deque<E> extends Queue<E> {
     /**
      * Inserts the specified element at the front of this deque if it is
@@ -358,6 +393,7 @@ public interface Deque<E> extends Queue<E> {
      *         deque does not permit null elements
      * (<a href="Collection.html#optional-restrictions">optional</a>)
      */
+    // 从此双端队列中删除第一次出现的指定元素
     boolean removeFirstOccurrence(Object o);
 
     /**
@@ -378,6 +414,7 @@ public interface Deque<E> extends Queue<E> {
      *         deque does not permit null elements
      * (<a href="Collection.html#optional-restrictions">optional</a>)
      */
+    // 从此双端队列中删除最后一次出现的指定元素
     boolean removeLastOccurrence(Object o);
 
     // *** Queue methods ***
@@ -579,6 +616,7 @@ public interface Deque<E> extends Queue<E> {
      * @return an iterator over the elements in this deque in reverse
      * sequence
      */
+    // 以相反的顺序返回此双端队列中元素的迭代器
     Iterator<E> descendingIterator();
 
 }

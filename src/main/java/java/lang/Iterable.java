@@ -42,12 +42,14 @@ import java.util.function.Consumer;
  * @since 1.5
  * @jls 14.14.2 The enhanced for statement
  */
+// 实现此接口允许对象成为“for-each 循环”语句的目标。
 public interface Iterable<T> {
     /**
      * Returns an iterator over elements of type {@code T}.
      *
      * @return an Iterator.
      */
+    // 返回迭代器
     Iterator<T> iterator();
 
     /**
@@ -69,6 +71,7 @@ public interface Iterable<T> {
      * @throws NullPointerException if the specified action is null
      * @since 1.8
      */
+    // 遍历 Iterable，通过 Consumer 接口一次消费
     default void forEach(Consumer<? super T> action) {
         Objects.requireNonNull(action);
         for (T t : this) {
@@ -97,6 +100,7 @@ public interface Iterable<T> {
      * {@code Iterable}.
      * @since 1.8
      */
+    // TODO-KWOK 不知道干嘛的，后续再看
     default Spliterator<T> spliterator() {
         return Spliterators.spliteratorUnknownSize(iterator(), 0);
     }

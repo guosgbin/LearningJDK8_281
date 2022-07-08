@@ -108,6 +108,13 @@ import java.util.function.UnaryOperator;
  * @since 1.2
  */
 
+/*
+ * 有序集合
+ * 有索引，允许重复元素，允许 null 元素。 子类也可以限制不允许插入 null 元素，但是 JDK 开发人员希望这种少用这种。
+ *
+ * List接口提供了一个特殊的迭代器，称为ListIterator ，
+ * 除了Iterator接口提供的正常操作之外，它还允许元素插入和替换以及双向访问。提供了一种方法来获取从列表中指定位置开始的列表迭代器。
+ */
 public interface List<E> extends Collection<E> {
     // Query Operations
 
@@ -118,6 +125,7 @@ public interface List<E> extends Collection<E> {
      *
      * @return the number of elements in this list
      */
+    // 集合元素个数
     int size();
 
     /**
@@ -125,6 +133,7 @@ public interface List<E> extends Collection<E> {
      *
      * @return <tt>true</tt> if this list contains no elements
      */
+    // 判空
     boolean isEmpty();
 
     /**
@@ -406,6 +415,7 @@ public interface List<E> extends Collection<E> {
      *         (<a href="Collection.html#optional-restrictions">optional</a>)
      * @since 1.8
      */
+    // 遍历集合元素，依次调用 UnaryOperator 的 apply 方法转换
     default void replaceAll(UnaryOperator<E> operator) {
         Objects.requireNonNull(operator);
         final ListIterator<E> li = this.listIterator();
@@ -472,6 +482,7 @@ public interface List<E> extends Collection<E> {
      *         contract
      * @since 1.8
      */
+    // 排序
     @SuppressWarnings({"unchecked", "rawtypes"})
     default void sort(Comparator<? super E> c) {
         Object[] a = this.toArray();
@@ -541,6 +552,7 @@ public interface List<E> extends Collection<E> {
      * @throws IndexOutOfBoundsException if the index is out of range
      *         (<tt>index &lt; 0 || index &gt;= size()</tt>)
      */
+    // 根据索引获取元素
     E get(int index);
 
     /**
@@ -561,6 +573,7 @@ public interface List<E> extends Collection<E> {
      * @throws IndexOutOfBoundsException if the index is out of range
      *         (<tt>index &lt; 0 || index &gt;= size()</tt>)
      */
+    // 设置指定索引处的 元素值
     E set(int index, E element);
 
     /**
@@ -582,6 +595,7 @@ public interface List<E> extends Collection<E> {
      * @throws IndexOutOfBoundsException if the index is out of range
      *         (<tt>index &lt; 0 || index &gt; size()</tt>)
      */
+    // 插入元素到 index 位置
     void add(int index, E element);
 
     /**
@@ -597,6 +611,7 @@ public interface List<E> extends Collection<E> {
      * @throws IndexOutOfBoundsException if the index is out of range
      *         (<tt>index &lt; 0 || index &gt;= size()</tt>)
      */
+    // 移除 index 位置的元素
     E remove(int index);
 
 
@@ -619,6 +634,7 @@ public interface List<E> extends Collection<E> {
      *         list does not permit null elements
      *         (<a href="Collection.html#optional-restrictions">optional</a>)
      */
+    // 此列表中指定元素第一次出现的索引，如果此列表不包含该元素，则为 -1
     int indexOf(Object o);
 
     /**
@@ -638,6 +654,7 @@ public interface List<E> extends Collection<E> {
      *         list does not permit null elements
      *         (<a href="Collection.html#optional-restrictions">optional</a>)
      */
+    // 此列表中指定元素最后一次出现的索引，如果此列表不包含该元素，则为 -1
     int lastIndexOf(Object o);
 
 
@@ -650,6 +667,7 @@ public interface List<E> extends Collection<E> {
      * @return a list iterator over the elements in this list (in proper
      *         sequence)
      */
+    // 返回迭代器 ListIterator
     ListIterator<E> listIterator();
 
     /**
@@ -667,6 +685,7 @@ public interface List<E> extends Collection<E> {
      * @throws IndexOutOfBoundsException if the index is out of range
      *         ({@code index < 0 || index > size()})
      */
+    // 此列表中元素的列表迭代器（按正确顺序），从列表中的指定位置开始
     ListIterator<E> listIterator(int index);
 
     // View
@@ -705,6 +724,7 @@ public interface List<E> extends Collection<E> {
      *         (<tt>fromIndex &lt; 0 || toIndex &gt; size ||
      *         fromIndex &gt; toIndex</tt>)
      */
+    // 返回 [fromIndex, toIndex) 的 subList
     List<E> subList(int fromIndex, int toIndex);
 
     /**
