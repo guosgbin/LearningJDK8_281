@@ -57,6 +57,33 @@ package java.util;
  * @see List#listIterator()
  * @since   1.2
  */
+
+/*
+ * 列表的迭代器，允许程序员在任一方向遍历列表，
+ * 在迭代期间修改列表，并获取迭代器在列表中的当前位置。
+ *
+ * ListIterator没有当前元素；
+ * 它的光标位置始终位于调用previous()将返回的元素与调用next()将返回的元素之间。长度为n的列表的迭代器具有n+1可能的光标位置，如下面的插入符号 ( ^ ) 所示：
+                        Element(0)   Element(1)   Element(2)   ... Element(n-1)
+   cursor positions:  ^            ^            ^            ^                  ^
+
+请注意， remove和set(Object)方法不是根据光标位置定义的；它们被定义为对调用next或previous()返回的最后一个元素进行操作。
+ *
+ *
+ * boolean hasNext(); 正向遍历是否有元素
+ * E next(); 获取下一个元素
+ * boolean hasPrevious(); 反向遍历是否有元素
+ * E previous(); 获取前一个元素
+ * int nextIndex(); 下一次调用 next() 方法返回元素的索引
+ * int previousIndex(); 下一次调用 previous() 方法返回元素的索引
+ * void remove(); 删除最后一次调用 previous() 或 next() 返回的元素，
+ *                  这个方法只能在 next()方法或 previous() 方法后调用一次
+ *                  只有在最后一次调用 next() 或 previous() 之后没有调用 add()时，才能进行此操作。
+ * void set(E e); 修改最后一次调用 previous() 或 next() 返回的元素
+ *                  这个方法只能在调用 next() 或 previous() 之后未调用 remove() 方法或 add() 方法后调用。
+ *
+ * void add(E e); 将指定元素插入 list，会插入到 next() 返回的元素之前，插入到 previous() 返回的元素之后
+ */
 public interface ListIterator<E> extends Iterator<E> {
     // Query Operations
 

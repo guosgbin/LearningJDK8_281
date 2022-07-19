@@ -51,6 +51,15 @@ import java.util.function.Consumer;
  * @see Iterable
  * @since 1.2
  */
+
+/*
+ * 迭代器
+ * 迭代器允许调用者在迭代期间从底层集合中删除元素
+ *
+ * boolean hasNext(); 是否有元素
+ * E next(); 获取下一个元素
+ * void remove(); 删除当前遍历到的元素，每次调用next时只能调用此方法一次
+ */
 public interface Iterator<E> {
     /**
      * Returns {@code true} if the iteration has more elements.
