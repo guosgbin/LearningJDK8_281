@@ -96,6 +96,7 @@ public class Vector<E>
      *
      * @serial
      */
+    // 存元素的数组
     protected Object[] elementData;
 
     /**
@@ -105,6 +106,7 @@ public class Vector<E>
      *
      * @serial
      */
+    // 集合中元素个数
     protected int elementCount;
 
     /**
@@ -115,6 +117,7 @@ public class Vector<E>
      *
      * @serial
      */
+    // 指定扩容增量，假如 capacityIncrement <= 0，那么 vector 每次扩容一倍
     protected int capacityIncrement;
 
     /** use serialVersionUID from JDK 1.0.2 for interoperability */
@@ -130,6 +133,7 @@ public class Vector<E>
      * @throws IllegalArgumentException if the specified initial capacity
      *         is negative
      */
+    // 指定容量，指定扩容增量
     public Vector(int initialCapacity, int capacityIncrement) {
         super();
         if (initialCapacity < 0)
@@ -156,6 +160,7 @@ public class Vector<E>
      * has size {@code 10} and its standard capacity increment is
      * zero.
      */
+    // 默认初始容量 10
     public Vector() {
         this(10);
     }
@@ -259,6 +264,13 @@ public class Vector<E>
      */
     private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
 
+    /*
+     * 扩容
+     * capacityIncrement > 0 就扩容指定增量
+     * capacityIncrement <= 0 就扩容一倍
+     *
+     * 还有其他特殊情况
+     */
     private void grow(int minCapacity) {
         // overflow-conscious code
         int oldCapacity = elementData.length;
