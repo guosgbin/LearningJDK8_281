@@ -45,6 +45,7 @@ package java.util;
  * @author  Jonathan Payne
  * @since   JDK1.0
  */
+// 通过 Vector 实现的栈，已经不推荐使用了
 public
 class Stack<E> extends Vector<E> {
     /**
