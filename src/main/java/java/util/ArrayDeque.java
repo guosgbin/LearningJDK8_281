@@ -83,6 +83,11 @@ import sun.misc.SharedSecrets;
  * @since   1.6
  * @param <E> the type of elements held in this collection
  */
+
+/*
+ * 线程不安全，不能添加空元素
+ * 这个类在作为栈使用时可能比Stack快，作为队列使用时比LinkedList快。
+ */
 public class ArrayDeque<E> extends AbstractCollection<E>
                            implements Deque<E>, Cloneable, Serializable
 {
@@ -96,6 +101,12 @@ public class ArrayDeque<E> extends AbstractCollection<E>
      * other.  We also guarantee that all array cells not holding
      * deque elements are always null.
      */
+    /*
+     * 存储双端队列元素的数组。
+     * 双端队列的容量就是这个数组的长度，它总是 2 的幂。
+     * 数组永远不允许变满，除非在 addX 方法中短暂地在变满后立即调整大小（请参阅 doubleCapacity），
+     * 从而避免头部和尾部环绕以彼此相等。我们还保证所有不包含双端队列元素的数组单元始终为空
+     */
     transient Object[] elements; // non-private to simplify nested class access
 
     /**
@@ -103,22 +114,36 @@ public class ArrayDeque<E> extends AbstractCollection<E>
      * element that would be removed by remove() or pop()); or an
      * arbitrary number equal to tail if the deque is empty.
      */
+    // 头部的索引
     transient int head;
 
     /**
      * The index at which the next element would be added to the tail
      * of the deque (via addLast(E), add(E), or push(E)).
      */
+    // 下一个添加到尾部的元素的索引，也就是 tail 指针指向最后一个元素的下一个位置
     transient int tail;
 
     /**
      * The minimum capacity that we'll use for a newly created deque.
      * Must be a power of 2.
      */
+    // 创建的双端队列的最小容量。必须是 2 的幂。
     private static final int MIN_INITIAL_CAPACITY = 8;
 
     // ******  Array allocation and resizing utilities ******
 
+    /*
+     * 找到距离 numElements 最近的 2 的 n 次幂， 最小值是 MIN_INITIAL_CAPACITY
+     *
+     * eg.
+     *      1 -> 8
+     *      4 -> 8
+     *      10 -> 16
+     *      13 -> 16
+     *      16 -> 32
+     * 注意：这个算法，当传入 16 的时候会返回 32，传 32 会返回 64，等等
+     */
     private static int calculateSize(int numElements) {
         int initialCapacity = MIN_INITIAL_CAPACITY;
         // Find the best power of two to hold elements.
@@ -132,6 +157,7 @@ public class ArrayDeque<E> extends AbstractCollection<E>
             initialCapacity |= (initialCapacity >>> 16);
             initialCapacity++;
 
+            // 处理溢出
             if (initialCapacity < 0)   // Too many elements, must back off
                 initialCapacity >>>= 1;// Good luck allocating 2 ^ 30 elements
         }
@@ -151,16 +177,19 @@ public class ArrayDeque<E> extends AbstractCollection<E>
      * Doubles the capacity of this deque.  Call only when full, i.e.,
      * when head and tail have wrapped around to become equal.
      */
+    // 当 deque 满了的时候，将 deque 的容量扩容一倍，也就是说 head == tail 时
     private void doubleCapacity() {
         assert head == tail;
-        int p = head;
-        int n = elements.length;
-        int r = n - p; // number of elements to the right of p
+        int p = head;               // head 的索引
+        int n = elements.length;    // 旧数组的长度
+        int r = n - p;              // number of elements to the right of p
         int newCapacity = n << 1;
         if (newCapacity < 0)
             throw new IllegalStateException("Sorry, deque too big");
         Object[] a = new Object[newCapacity];
+        // 原数组 p 后面的数据，放到新数组的 0 的位置
         System.arraycopy(elements, p, a, 0, r);
+        // 原数组 p 前面的数据，放到新数组 r 的位置
         System.arraycopy(elements, 0, a, r, p);
         elements = a;
         head = 0;
@@ -189,6 +218,7 @@ public class ArrayDeque<E> extends AbstractCollection<E>
      * Constructs an empty array deque with an initial capacity
      * sufficient to hold 16 elements.
      */
+    // 默认初始容量是 16
     public ArrayDeque() {
         elements = new Object[16];
     }
@@ -231,6 +261,7 @@ public class ArrayDeque<E> extends AbstractCollection<E>
     public void addFirst(E e) {
         if (e == null)
             throw new NullPointerException();
+        // 取模防止数组索引溢出
         elements[head = (head - 1) & (elements.length - 1)] = e;
         if (head == tail)
             doubleCapacity();
@@ -248,6 +279,9 @@ public class ArrayDeque<E> extends AbstractCollection<E>
         if (e == null)
             throw new NullPointerException();
         elements[tail] = e;
+        // tail = (tail + 1) & (elements.length - 1)
+        // 因为 elements.length 是 2 的 n 次 幂，所以  & (elements.length - 1) 相当于 取模
+        // 取模是因为这个队列是 环形队列，防止数组索引溢出
         if ( (tail = (tail + 1) & (elements.length - 1)) == head)
             doubleCapacity();
     }
@@ -296,6 +330,9 @@ public class ArrayDeque<E> extends AbstractCollection<E>
         return x;
     }
 
+    /**
+     * 弹出 head 指针的元素
+     */
     public E pollFirst() {
         int h = head;
         @SuppressWarnings("unchecked")
@@ -303,12 +340,18 @@ public class ArrayDeque<E> extends AbstractCollection<E>
         // Element is null if deque empty
         if (result == null)
             return null;
+        // 槽位置空
         elements[h] = null;     // Must null out slot
+        // head 指针后移
         head = (h + 1) & (elements.length - 1);
         return result;
     }
 
+    /**
+     * 弹出 tail 指针的元素
+     */
     public E pollLast() {
+        // tail 指针前移，此时 t 指向的元素就是最后一个元素
         int t = (tail - 1) & (elements.length - 1);
         @SuppressWarnings("unchecked")
         E result = (E) elements[t];
@@ -372,9 +415,11 @@ public class ArrayDeque<E> extends AbstractCollection<E>
         Object x;
         while ( (x = elements[i]) != null) {
             if (o.equals(x)) {
+                // 删除元素
                 delete(i);
                 return true;
             }
+            // 取模
             i = (i + 1) & mask;
         }
         return false;
@@ -403,6 +448,7 @@ public class ArrayDeque<E> extends AbstractCollection<E>
                 delete(i);
                 return true;
             }
+            // 取模
             i = (i - 1) & mask;
         }
         return false;
@@ -540,14 +586,16 @@ public class ArrayDeque<E> extends AbstractCollection<E>
      *
      * @return true if elements moved backwards
      */
+    // 删除元素数组中指定位置的元素，根据需要调整头部和尾部。这可能导致数组中的元素向后或向前移动。
+    // TODO-KWOK 有点挑战啊
     private boolean delete(int i) {
         checkInvariants();
-        final Object[] elements = this.elements;
-        final int mask = elements.length - 1;
-        final int h = head;
-        final int t = tail;
-        final int front = (i - h) & mask;
-        final int back  = (t - i) & mask;
+        final Object[] elements = this.elements;    // 数组
+        final int mask = elements.length - 1;       // 掩码，用于取模
+        final int h = head;                         // h 指针
+        final int t = tail;                         // t 指针
+        final int front = (i - h) & mask;           //  3-2 = 1
+        final int back  = (t - i) & mask;           // 4 -2 = 2
 
         // Invariant: head <= i < tail mod circularity
         if (front >= ((t - h) & mask))
@@ -586,6 +634,7 @@ public class ArrayDeque<E> extends AbstractCollection<E>
      *
      * @return the number of elements in this deque
      */
+    // 负数 用 & (elements.length - 1) 操作的话， 比如 -5 & 7 = 3 ，这个需要注意
     public int size() {
         return (tail - head) & (elements.length - 1);
     }
@@ -619,18 +668,21 @@ public class ArrayDeque<E> extends AbstractCollection<E>
         /**
          * Index of element to be returned by subsequent call to next.
          */
+        // 指向下一次调用 next() 方法返回的元素
         private int cursor = head;
 
         /**
          * Tail recorded at construction (also in remove), to stop
          * iterator and also to check for comodification.
          */
+        // 最后一个元素的指针
         private int fence = tail;
 
         /**
          * Index of element returned by most recent call to next.
          * Reset to -1 if element is deleted by a call to remove.
          */
+        // 最近调用 next() 返回的元素的索引。如果元素被调用 remove 删除，则重置为 -1。
         private int lastRet = -1;
 
         public boolean hasNext() {
