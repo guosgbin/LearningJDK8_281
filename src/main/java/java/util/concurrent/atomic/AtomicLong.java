@@ -56,6 +56,7 @@ public class AtomicLong extends Number implements java.io.Serializable {
 
     // setup to use Unsafe.compareAndSwapLong for updates
     private static final Unsafe unsafe = Unsafe.getUnsafe();
+    // value 的偏移量
     private static final long valueOffset;
 
     /**
@@ -74,11 +75,14 @@ public class AtomicLong extends Number implements java.io.Serializable {
 
     static {
         try {
+            // 获取 value 变量在 AtomicLong 类中的偏移量，保存到 valueOffset 中
             valueOffset = unsafe.objectFieldOffset
                 (AtomicLong.class.getDeclaredField("value"));
         } catch (Exception ex) { throw new Error(ex); }
     }
 
+    // 实际操作的变量值，初始值为 0
+    // volatile 保证了线程之间的可见性
     private volatile long value;
 
     /**
@@ -168,6 +172,7 @@ public class AtomicLong extends Number implements java.io.Serializable {
      *
      * @return the previous value
      */
+    // getAndAddLong 这个方法可以将当前 AtomicLong 实例对象中内存偏移量 valueOffset 对应的字段（即value变量）加1。
     public final long getAndIncrement() {
         return unsafe.getAndAddLong(this, valueOffset, 1L);
     }

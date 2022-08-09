@@ -51,15 +51,18 @@ public class AtomicBoolean implements java.io.Serializable {
     private static final long serialVersionUID = 4654671469794556979L;
     // setup to use Unsafe.compareAndSwapInt for updates
     private static final Unsafe unsafe = Unsafe.getUnsafe();
+    // value 字段在 AtomicBoolean 类的地址偏移量
     private static final long valueOffset;
 
     static {
         try {
+            // 获取当前 AtomicBoolean 类的 value 字段的地址偏移量
             valueOffset = unsafe.objectFieldOffset
                 (AtomicBoolean.class.getDeclaredField("value"));
         } catch (Exception ex) { throw new Error(ex); }
     }
 
+    // 原子类封装的对象
     private volatile int value;
 
     /**
