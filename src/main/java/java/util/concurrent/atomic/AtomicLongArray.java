@@ -49,14 +49,18 @@ public class AtomicLongArray implements java.io.Serializable {
     private static final long serialVersionUID = -2308431214976778248L;
 
     private static final Unsafe unsafe = Unsafe.getUnsafe();
+    // 数组的第一个元素相对该数组的地址偏移量
     private static final int base = unsafe.arrayBaseOffset(long[].class);
     private static final int shift;
+    // 当前封装的数组
     private final long[] array;
 
     static {
+        // 获取数组中每个元素占用的字节数
         int scale = unsafe.arrayIndexScale(long[].class);
         if ((scale & (scale - 1)) != 0)
             throw new Error("data type scale not a power of two");
+        // 获取数组中每个元素占用的字节数是 2 的几次幂，用于后面做位运算
         shift = 31 - Integer.numberOfLeadingZeros(scale);
     }
 
@@ -67,6 +71,9 @@ public class AtomicLongArray implements java.io.Serializable {
         return byteOffset(i);
     }
 
+    /**
+     * 获取索引 i 位置的元素的地址偏移量
+     */
     private static long byteOffset(int i) {
         return ((long) i << shift) + base;
     }

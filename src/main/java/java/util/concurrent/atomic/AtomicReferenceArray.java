@@ -49,21 +49,26 @@ import sun.misc.Unsafe;
  * @author Doug Lea
  * @param <E> The base class of elements held in this array
  */
+// 原子数组，
 public class AtomicReferenceArray<E> implements java.io.Serializable {
     private static final long serialVersionUID = -6209656149925076980L;
 
     private static final Unsafe unsafe;
     private static final int base;
     private static final int shift;
+    // array 字段在 AtomicReferenceArray 的地址偏移量
     private static final long arrayFieldOffset;
     private final Object[] array; // must have exact type Object[]
 
     static {
         try {
             unsafe = Unsafe.getUnsafe();
+            // 获取 array 字段在 AtomicReferenceArray 中的地址偏移量
             arrayFieldOffset = unsafe.objectFieldOffset
                 (AtomicReferenceArray.class.getDeclaredField("array"));
+            // 获取数组第一个元素相对数组的地址偏移量
             base = unsafe.arrayBaseOffset(Object[].class);
+            // 获取数组中单个元素占用的字节数
             int scale = unsafe.arrayIndexScale(Object[].class);
             if ((scale & (scale - 1)) != 0)
                 throw new Error("data type scale not a power of two");
@@ -80,6 +85,9 @@ public class AtomicReferenceArray<E> implements java.io.Serializable {
         return byteOffset(i);
     }
 
+    /**
+     * 获取索引 i 处的地址偏移量
+     */
     private static long byteOffset(int i) {
         return ((long) i << shift) + base;
     }

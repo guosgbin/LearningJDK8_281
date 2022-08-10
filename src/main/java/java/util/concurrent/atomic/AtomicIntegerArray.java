@@ -46,15 +46,22 @@ import sun.misc.Unsafe;
  * @since 1.5
  * @author Doug Lea
  */
+// 原子数组，表示数组中的元素可以原子更新，（ps.不是原子更新整个数组，而是原子更新数组中的某个位置的元素）
 public class AtomicIntegerArray implements java.io.Serializable {
     private static final long serialVersionUID = 2862133569453604235L;
 
     private static final Unsafe unsafe = Unsafe.getUnsafe();
+    // 获取数组中第一个元素的相对数组起始地址的偏移值
     private static final int base = unsafe.arrayBaseOffset(int[].class);
     private static final int shift;
+    // 封装的数组
     private final int[] array;
 
     static {
+        // 获取数组中每个位置的元素占用的字节数
+        // 通过 base + i * sacle 其实就可以知道 索引 i 的元素在数组中的内存起始地址。
+        // i << shift + base = i * 2^shift + base
+        // 2^shift 其实就是 scale
         int scale = unsafe.arrayIndexScale(int[].class);
         if ((scale & (scale - 1)) != 0)
             throw new Error("data type scale not a power of two");
@@ -68,6 +75,11 @@ public class AtomicIntegerArray implements java.io.Serializable {
         return byteOffset(i);
     }
 
+    /**
+     * 获取 i 位置的元素的地址偏移量
+     * @param i
+     * @return
+     */
     private static long byteOffset(int i) {
         return ((long) i << shift) + base;
     }
