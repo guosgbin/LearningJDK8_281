@@ -47,10 +47,17 @@ package java.util.concurrent.atomic;
  * @author Doug Lea
  * @param <V> The type of object referred to by this reference
  */
+
+/*
+ * 维护一个对象引用和一个标记位，可以原子地更新
+ *
+ */
 public class AtomicMarkableReference<V> {
 
     private static class Pair<T> {
+        // 引用
         final T reference;
+        // 标记位
         final boolean mark;
         private Pair(T reference, boolean mark) {
             this.reference = reference;
@@ -61,6 +68,7 @@ public class AtomicMarkableReference<V> {
         }
     }
 
+    // 封装的对象
     private volatile Pair<V> pair;
 
     /**
@@ -191,9 +199,11 @@ public class AtomicMarkableReference<V> {
     // Unsafe mechanics
 
     private static final sun.misc.Unsafe UNSAFE = sun.misc.Unsafe.getUnsafe();
+    // 获取 pair 字段在 AtomicMarkableReference 类中的地址偏移量
     private static final long pairOffset =
         objectFieldOffset(UNSAFE, "pair", AtomicMarkableReference.class);
 
+    // 对 pair 对象进行 cas 操作
     private boolean casPair(Pair<V> cmp, Pair<V> val) {
         return UNSAFE.compareAndSwapObject(this, pairOffset, cmp, val);
     }

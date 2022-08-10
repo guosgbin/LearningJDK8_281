@@ -50,6 +50,7 @@ public class AtomicReference<V> implements java.io.Serializable {
     private static final long serialVersionUID = -1848883965231344442L;
 
     private static final Unsafe unsafe = Unsafe.getUnsafe();
+    // value 在 AtomicReference 的地址偏移量
     private static final long valueOffset;
 
     static {
@@ -59,6 +60,7 @@ public class AtomicReference<V> implements java.io.Serializable {
         } catch (Exception ex) { throw new Error(ex); }
     }
 
+    // 持有一个对象的引用
     private volatile V value;
 
     /**

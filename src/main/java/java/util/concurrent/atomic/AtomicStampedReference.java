@@ -47,10 +47,16 @@ package java.util.concurrent.atomic;
  * @author Doug Lea
  * @param <V> The type of object referred to by this reference
  */
+
+/*
+ * 加了一个 int 的版本号
+ */
 public class AtomicStampedReference<V> {
 
     private static class Pair<T> {
+        // 引用
         final T reference;
+        // 版本号
         final int stamp;
         private Pair(T reference, int stamp) {
             this.reference = reference;
@@ -61,6 +67,7 @@ public class AtomicStampedReference<V> {
         }
     }
 
+    // 封装的对象
     private volatile Pair<V> pair;
 
     /**
@@ -100,6 +107,7 @@ public class AtomicStampedReference<V> {
      * {@code stampholder[0]} will hold the value of the stamp.
      * @return the current value of the reference
      */
+    // 获取 pair 中的 reference，入参的数组的作用只是为了获取版本号
     public V get(int[] stampHolder) {
         Pair<V> pair = this.pair;
         stampHolder[0] = pair.stamp;
@@ -116,10 +124,10 @@ public class AtomicStampedReference<V> {
      * spuriously and does not provide ordering guarantees</a>, so is
      * only rarely an appropriate alternative to {@code compareAndSet}.
      *
-     * @param expectedReference the expected value of the reference
-     * @param newReference the new value for the reference
-     * @param expectedStamp the expected value of the stamp
-     * @param newStamp the new value for the stamp
+     * @param expectedReference the expected value of the reference 期望值
+     * @param newReference the new value for the reference 新值
+     * @param expectedStamp the expected value of the stamp 期望版本号
+     * @param newStamp the new value for the stamp 新的版本号
      * @return {@code true} if successful
      */
     public boolean weakCompareAndSet(V   expectedReference,
@@ -141,6 +149,12 @@ public class AtomicStampedReference<V> {
      * @param expectedStamp the expected value of the stamp
      * @param newStamp the new value for the stamp
      * @return {@code true} if successful
+     */
+    /*
+     * 期望引用 == 当前引用 && 期望版本号 == 当前版本号
+     * && ((新的引用 == 当前引用 && 当前版本号 == 新的版本号) || cas 更新)
+     *
+     * 有个小优化，就是假如 "新的引用 == 当前引用 && 当前版本号 == 新的版本号" 那就不更新了
      */
     public boolean compareAndSet(V   expectedReference,
                                  V   newReference,
@@ -179,6 +193,14 @@ public class AtomicStampedReference<V> {
      * @param expectedReference the expected value of the reference
      * @param newStamp the new value for the stamp
      * @return {@code true} if successful
+     */
+    /*
+     * 只更新版本号
+     *
+     * 假如期望引用和当前引用不相等，直接返回false
+     * 前置条件：期望引用 == 当前引用
+     *      假如新的版本号和当前版本号相等，则什么都不做，直接返回 true
+     *      假如新的版本号和当前版本号不相等，则尝试 cas 更新
      */
     public boolean attemptStamp(V expectedReference, int newStamp) {
         Pair<V> current = pair;
