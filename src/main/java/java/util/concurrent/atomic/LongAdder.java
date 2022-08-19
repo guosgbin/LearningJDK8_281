@@ -82,12 +82,28 @@ public class LongAdder extends Striped64 implements Serializable {
      * @param x the value to add
      */
     public void add(long x) {
-        Cell[] as; long b, v; int m; Cell a;
+        Cell[] as;  // Cell 数组
+        long b, v;  // b: base 字段，v: 待更新值的期望值
+        int m;      // m: Cells 数组长度 - 1，-减 1 是为了配置数组长度做 求余操作
+        Cell a;     // 线程对应 probe 值对应在 Cells 数组位置的 Cell 元素
+        // CASE1 : 数组未初始化
+        // CASE2 : cas 操作成功
         if ((as = cells) != null || !casBase(b = base, b + x)) {
+            // 走到这里说明 cas 发生竞争了
+
+            // 是否发送竞争的标记，true 表示未发生竞争
             boolean uncontended = true;
-            if (as == null || (m = as.length - 1) < 0 ||
-                (a = as[getProbe() & m]) == null ||
-                !(uncontended = a.cas(v = a.value, v + x)))
+            // CASE1 : cell数组还未初始化
+            // CASE2 : cell 数组已经初始化了，但是数组长度是 0
+            // CASE3 : getProbe() 获取当前线程的哈希值，求余获取索引，获取在 cell 数组该位置的值
+            //        (a = as[getProbe() & m]) == null 说明当前位置无元素
+            // CASE4 : 尝试 cas 更新 cell 的值
+            if (as == null || (m = as.length - 1) < 0
+                    || (a = as[getProbe() & m]) == null || !(uncontended = a.cas(v = a.value, v + x)))
+                // 进入这里的 case
+                // 1 发生竞争了，cell 数组未初始化，需要进去初始化 cell 数组
+                // 2 发送竞争了，且 probe 位置的 cell 为 null，需要进去创建 cell
+                // 3 发生竞争了，且probe 位置的 cell 不为 null，则需要 cas 更新 cell 的值，到这里说明 cas 失败了
                 longAccumulate(x, null, uncontended);
         }
     }
@@ -115,6 +131,7 @@ public class LongAdder extends Striped64 implements Serializable {
      *
      * @return the sum
      */
+    // 这个返回值并不是一定准确的
     public long sum() {
         Cell[] as = cells; Cell a;
         long sum = base;

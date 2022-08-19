@@ -98,22 +98,24 @@ public class AtomicReferenceTest {
     public void testIntroduceRight() throws InterruptedException {
         List<Thread> list = new ArrayList<>();
 
-        for (int i = 0; i < 100; i++) {
-            Thread thread = new Thread(() -> {
-                for (; ; ) { // 自旋
-                    Stock stock = stockRef.get();
-                    Stock newStock = new Stock(stock.getGoodsName(), stock.count + 1);
-                    // CAS 操作
-                    if (stockRef.compareAndSet(stock, newStock)) {
-                        System.out.println(newStock);
-                        break;
-                    }
-                    try {
-                        TimeUnit.MILLISECONDS.sleep(100);
-                    } catch (InterruptedException e) {
-                    }
+        Runnable task = () -> {
+            for (; ; ) { // 自旋
+                Stock stock = stockRef.get();
+                Stock newStock = new Stock(stock.getGoodsName(), stock.count + 1);
+                // CAS 操作
+                if (stockRef.compareAndSet(stock, newStock)) {
+                    System.out.println(newStock);
+                    break;
                 }
-            });
+                try {
+                    TimeUnit.MILLISECONDS.sleep(100);
+                } catch (InterruptedException e) {
+                }
+            }
+        };
+
+        for (int i = 0; i < 100; i++) {
+            Thread thread = new Thread(task);
             list.add(thread);
             thread.start();
         }
@@ -134,34 +136,33 @@ public class AtomicReferenceTest {
     public void testABAProblem() throws InterruptedException {
         AtomicReference<Integer> ref = new AtomicReference<>(100);
         Thread t1 = new Thread(() -> {
+            sleep(100);
+            // 先从 100 设置到 50
             ref.compareAndSet(100, 50);
-            try {
-                TimeUnit.MILLISECONDS.sleep(100);
-            } catch (InterruptedException e) {
-            }
+            sleep(100);
+            // 再将 50 恢复到 100
             ref.compareAndSet(50, 100);
             System.out.println("引用值从 100 -> 50 -> 100");
         }, "update-thread");
 
         Thread t2 = new Thread(() -> {
             Integer value = ref.get();
+            System.out.println(Thread.currentThread().getName() + "获取到值：" + value);
             // 拿到了 value 值，模拟去做别的操作
-            try {
-                TimeUnit.MILLISECONDS.sleep(1000);
-            } catch (InterruptedException e) {
+            sleep(1000);
+            boolean setSuccess = ref.compareAndSet(value, 200);
+            if (setSuccess) {
+                System.out.println(Thread.currentThread().getName() + "发现引用值还是 100，就改成了 200");
+            } else {
+                System.out.println(Thread.currentThread().getName() + "设置 200 失败");
             }
-
-            ref.compareAndSet(value, 200);
-            System.out.println(Thread.currentThread().getName() + "发现引用值还是 100，就改成了 200");
         }, "read-thread");
 
+        // 打印监控线程
         Thread t3 = new Thread(() -> {
             int i = 0;
             while (true) {
-                try {
-                    TimeUnit.MILLISECONDS.sleep(10);
-                } catch (InterruptedException e) {
-                }
+                sleep(10);
                 System.out.println(i++ + " " + Thread.currentThread().getName() + " " + ref.get());
             }
         }, "monitor-thread");
@@ -175,9 +176,14 @@ public class AtomicReferenceTest {
         t1.join();
         t2.join();
         System.out.println("===");
-
     }
 
+    public void sleep(long milliseconds) {
+        try {
+            TimeUnit.MILLISECONDS.sleep(milliseconds);
+        } catch (InterruptedException e) {
+        }
+    }
 
 
 

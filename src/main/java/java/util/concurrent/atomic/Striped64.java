@@ -46,6 +46,22 @@ import java.util.concurrent.ThreadLocalRandom;
 @SuppressWarnings("serial")
 abstract class Striped64 extends Number {
     /*
+     * 一个懒加载的表，还有个 base 字段。
+     * 表的长度是 2 的 n 次幂，索引用每个线程的哈希吗
+     *
+     * table 的每个元素是 Cell 类，填充了 AtomicLong 的变体（通过@sun.misc.Contended）以减少缓存争用。
+     *
+     *
+     * 因为 Cell 对象很大，所以会在需要时才会去创建，当没有争用时，所有更新都对 base 字段进行。
+     * 表大小在进一步争用时加倍，直到达到大于或等于 CPU 数量的最接近的 2 次方。表槽在需要之前保持为空（null）。
+     *
+     * 自旋锁 cellsBusy 用于初始化和扩容，以及新的 Cell 填充
+     * 当锁不可用时，线程尝试其他slot（或base）。
+     *
+     *
+     * Thread 的 probe，获取哈希值
+     */
+    /*
      * This class maintains a lazily-initialized table of atomically
      * updated variables, plus an extra "base" field. The table size
      * is a power of two. Indexing uses masked per-thread hash codes.
@@ -117,6 +133,7 @@ abstract class Striped64 extends Number {
      * JVM intrinsics note: It would be possible to use a release-only
      * form of CAS here, if it were provided.
      */
+    //  @sun.misc.Contended 这个注解表示对象或其字段可能会遇到内存争用
     @sun.misc.Contended static final class Cell {
         volatile long value;
         Cell(long x) { value = x; }
@@ -131,6 +148,7 @@ abstract class Striped64 extends Number {
             try {
                 UNSAFE = sun.misc.Unsafe.getUnsafe();
                 Class<?> ak = Cell.class;
+                // 获取 value 字段在 Cell 对象中的地址偏移量
                 valueOffset = UNSAFE.objectFieldOffset
                     (ak.getDeclaredField("value"));
             } catch (Exception e) {
@@ -140,22 +158,26 @@ abstract class Striped64 extends Number {
     }
 
     /** Number of CPUS, to place bound on table size */
+    // CPU 数量
     static final int NCPU = Runtime.getRuntime().availableProcessors();
 
     /**
      * Table of cells. When non-null, size is a power of 2.
      */
+    // 长度是 2 的 n 幂
     transient volatile Cell[] cells;
 
     /**
      * Base value, used mainly when there is no contention, but also as
      * a fallback during table initialization races. Updated via CAS.
      */
+    // base，主要在没有争用时使用，但也可作为表初始化 TODO-KWOK ?。通过 CAS 更新。
     transient volatile long base;
 
     /**
      * Spinlock (locked via CAS) used when resizing and/or creating Cells.
      */
+    // 自旋锁，在扩容或者创建 Cells 的时候使用
     transient volatile int cellsBusy;
 
     /**
@@ -167,6 +189,7 @@ abstract class Striped64 extends Number {
     /**
      * CASes the base field.
      */
+    // CAS 更新 base 字段
     final boolean casBase(long cmp, long val) {
         return UNSAFE.compareAndSwapLong(this, BASE, cmp, val);
     }
@@ -174,6 +197,7 @@ abstract class Striped64 extends Number {
     /**
      * CASes the cellsBusy field from 0 to 1 to acquire lock.
      */
+    // cellBusy 作为自旋锁，将值从 0 更新到 1，表示获取到锁
     final boolean casCellsBusy() {
         return UNSAFE.compareAndSwapInt(this, CELLSBUSY, 0, 1);
     }
@@ -213,49 +237,73 @@ abstract class Striped64 extends Number {
      */
     final void longAccumulate(long x, LongBinaryOperator fn,
                               boolean wasUncontended) {
+        // 当前线程的哈希值
         int h;
+        // 获取当前线程的哈希值，假如为 0，说明还未给当前线程分配哈希值
         if ((h = getProbe()) == 0) {
+            // 赋值一个新的哈希值
             ThreadLocalRandom.current(); // force initialization
             h = getProbe();
             wasUncontended = true;
         }
+
         boolean collide = false;                // True if last slot nonempty
         for (;;) {
+            /*
+             * as: cell数组
+             * a: 路由寻址的元素，cell
+             * n: cell数组长度
+             * v:
+             */
             Cell[] as; Cell a; int n; long v;
+            // 这个 if 的条件是 cells 已经初始化了
             if ((as = cells) != null && (n = as.length) > 0) {
+                // 这个条件说明 cell 处是 null，需要新建 cell 填充
                 if ((a = as[(n - 1) & h]) == null) {
                     if (cellsBusy == 0) {       // Try to attach new Cell
                         Cell r = new Cell(x);   // Optimistically create
-                        if (cellsBusy == 0 && casCellsBusy()) {
+                        if (cellsBusy == 0 && casCellsBusy()) { // 尝试获取锁
+                            // 获取锁成功
                             boolean created = false;
                             try {               // Recheck under lock
+                                /*
+                                 * rs: cell 数组
+                                 * m: cell 数组的长度
+                                 * j: 路由寻址的 cell
+                                 */
                                 Cell[] rs; int m, j;
-                                if ((rs = cells) != null &&
-                                    (m = rs.length) > 0 &&
-                                    rs[j = (m - 1) & h] == null) {
-                                    rs[j] = r;
+                                // 双重检查
+                                if ((rs = cells) != null && (m = rs.length) > 0 && rs[j = (m - 1) & h] == null) {
+                                    rs[j] = r; // 赋值
                                     created = true;
                                 }
                             } finally {
+                                // 释放锁
                                 cellsBusy = 0;
                             }
+                            // 创建 cell 成功，则退出自旋
                             if (created)
                                 break;
                             continue;           // Slot is now non-empty
                         }
                     }
+                    // 扩容意向设置为 false，不扩容，因为线程路由寻址的位置的元素是 null，不需要扩容
                     collide = false;
                 }
                 else if (!wasUncontended)       // CAS already known to fail
                     wasUncontended = true;      // Continue after rehash
-                else if (a.cas(v = a.value, ((fn == null) ? v + x :
-                                             fn.applyAsLong(v, x))))
+                // 只有在经过上面两个 if 的情况后重置线程哈希值之后才会到这里
+                // 重置线程哈希值后，对新的哈希值路由寻址的 cell 进行 cas 操作
+                else if (a.cas(v = a.value, ((fn == null) ? v + x : fn.applyAsLong(v, x))))
+                    // 更新成功直接退出
                     break;
+                // 说明针对上面哈希寻址的 cell cas 更新失败了，则需要扩容
                 else if (n >= NCPU || cells != as)
                     collide = false;            // At max size or stale
                 else if (!collide)
                     collide = true;
                 else if (cellsBusy == 0 && casCellsBusy()) {
+                    // 拿锁，扩容
                     try {
                         if (cells == as) {      // Expand table unless stale
                             Cell[] rs = new Cell[n << 1];
@@ -264,6 +312,7 @@ abstract class Striped64 extends Number {
                             cells = rs;
                         }
                     } finally {
+                        // 释放锁
                         cellsBusy = 0;
                     }
                     collide = false;
@@ -271,23 +320,33 @@ abstract class Striped64 extends Number {
                 }
                 h = advanceProbe(h);
             }
+
+            // 进入这个分支，说明 cell 数组还未初始化， 且是无锁状态，尝试获取锁，并初始化 cell 数组
             else if (cellsBusy == 0 && cells == as && casCellsBusy()) {
+                // cell 数组是否初始化成功标记
                 boolean init = false;
                 try {                           // Initialize table
+                    // 双重检查
                     if (cells == as) {
+                        // 创建长度为 2 的数组，并给哈希寻址的位置初始化为 x
                         Cell[] rs = new Cell[2];
                         rs[h & 1] = new Cell(x);
                         cells = rs;
                         init = true;
                     }
                 } finally {
+                    // 释释放锁
                     cellsBusy = 0;
                 }
+                // 初始化成功，则退出循环
+                // 初始化失败，说明有其他线程正在初始化，或者已经初始化，继续自旋
                 if (init)
                     break;
             }
-            else if (casBase(v = base, ((fn == null) ? v + x :
-                                        fn.applyAsLong(v, x))))
+            // 走到这里的条件是
+            // 未拿到锁，则去 cas 更新 base 值
+            else if (casBase(v = base, ((fn == null) ? v + x : fn.applyAsLong(v, x))))
+                // cas 更新 base 成功则退出自旋
                 break;                          // Fall back on using base
         }
     }
@@ -391,8 +450,12 @@ abstract class Striped64 extends Number {
 
     // Unsafe mechanics
     private static final sun.misc.Unsafe UNSAFE;
+    // base 字段在 Striped64 中的地址偏移量
     private static final long BASE;
+    // cellsBusy 字段在 Striped64 中的地址偏移量
     private static final long CELLSBUSY;
+    // threadLocalRandomProbe 字段在 Thread 中的地址偏移量
+    // threadLocalRandomProbe 可以看成线程的哈希值
     private static final long PROBE;
     static {
         try {

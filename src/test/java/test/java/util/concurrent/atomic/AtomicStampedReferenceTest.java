@@ -2,6 +2,22 @@ package test.java.util.concurrent.atomic;
 
 import org.junit.jupiter.api.Test;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.Period;
+import java.time.temporal.ChronoField;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
+import java.time.temporal.ValueRange;
+import java.time.temporal.WeekFields;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicStampedReference;
@@ -92,15 +108,14 @@ public class AtomicStampedReferenceTest {
         // 初始版本号是 1
         AtomicStampedReference<Integer> ref = new AtomicStampedReference<>(100, 1);
         Thread t1 = new Thread(() -> {
+            String name = Thread.currentThread().getName();
             int stamp = ref.getStamp();
             ref.compareAndSet(100, 50, stamp, stamp + 1);
-            try {
-                TimeUnit.MILLISECONDS.sleep(100);
-            } catch (InterruptedException e) {
-            }
+            System.out.printf("%s 引用值从 100 -> 50\n", name);
+            sleep(100);
             int stamp2 = ref.getStamp();
             ref.compareAndSet(50, 100, stamp2, stamp2 + 1);
-            System.out.println("引用值从 100 -> 50 -> 100");
+            System.out.printf("%s 引用值从 50 -> 100\n", name);
         }, "update-thread");
 
         Thread t2 = new Thread(() -> {
@@ -108,11 +123,7 @@ public class AtomicStampedReferenceTest {
             Integer value = ref.getReference();
             int stamp = ref.getStamp();
             // 拿到了 value 值，模拟去做别的操作
-            try {
-                TimeUnit.MILLISECONDS.sleep(1000);
-            } catch (InterruptedException e) {
-            }
-
+            sleep(1000);
             boolean updateSuccess = ref.compareAndSet(value, 200, stamp, stamp + 1);
             if (updateSuccess) {
                 System.out.printf("%s 更新成功\n", name);
@@ -122,24 +133,29 @@ public class AtomicStampedReferenceTest {
         }, "read-thread");
 
         Thread t3 = new Thread(() -> {
-            int i = 0;
+            int i = 1;
             while (true) {
-                try {
-                    TimeUnit.MILLISECONDS.sleep(10);
-                } catch (InterruptedException e) {
-                }
-                System.out.printf("%s %s %s 版本号 %s\n", i++, Thread.currentThread().getName(), ref.getReference(), ref.getStamp());
+                sleep(10);
+                System.out.printf("%s %s %s 版本号 %s\n", i++, Thread.currentThread().getName(),
+                        ref.getReference(), ref.getStamp());
             }
         }, "monitor-thread");
 
         t3.setDaemon(true);
         t3.start();
-        TimeUnit.MILLISECONDS.sleep(100);
+        sleep(100);
         t1.start();
         t2.start();
 
         t1.join();
         t2.join();
         System.out.println("===");
+    }
+
+    public void sleep(long milliseconds) {
+        try {
+            TimeUnit.MILLISECONDS.sleep(milliseconds);
+        } catch (InterruptedException e) {
+        }
     }
 }

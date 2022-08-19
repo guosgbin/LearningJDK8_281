@@ -82,6 +82,17 @@ import sun.reflect.Reflection;
  * @param <T> The type of the object holding the updatable field
  * @param <V> The type of the field
  */
+
+/*
+ * 原子更新器 AtomicReferenceFieldUpdater 的使用存在比较苛刻的条件：
+ * - 操作的字段不能是static类型。
+ * - 操作的字段不能是final类型的，因为final根本没法修改。
+ * - 字段必须是volatile修饰的，也就是数据本身是读一致的。
+ * - 属性必须对当前的Updater所在的区域是可见的，
+ *      如果不是当前类内部进行原子更新器操作不能使用private，protected
+ *      子类操作父类时修饰符必须是protect权限及以上，
+ *      如果在同一个package下则必须是default权限及以上，也就是说无论何时都应该保证操作类与被操作类间的可见性。
+ */
 public abstract class AtomicReferenceFieldUpdater<T,V> {
 
     /**
@@ -101,6 +112,11 @@ public abstract class AtomicReferenceFieldUpdater<T,V> {
      * exception if the class does not hold field or is the wrong type,
      * or the field is inaccessible to the caller according to Java language
      * access control
+     */
+    /*
+     * @param tclass 目标对象的类型
+     * @param vclass 目标对象里的字段的类型
+     * @param fieldName 目标对象里的字段的名字
      */
     @CallerSensitive
     public static <U,W> AtomicReferenceFieldUpdater<U,W> newUpdater(Class<U> tclass,
@@ -286,6 +302,7 @@ public abstract class AtomicReferenceFieldUpdater<T,V> {
     private static final class AtomicReferenceFieldUpdaterImpl<T,V>
         extends AtomicReferenceFieldUpdater<T,V> {
         private static final sun.misc.Unsafe U = sun.misc.Unsafe.getUnsafe();
+        // 字段在 tclass 的类中的地址偏移量
         private final long offset;
         /**
          * if field is protected, the subclass constructing updater, else
@@ -308,30 +325,44 @@ public abstract class AtomicReferenceFieldUpdater<T,V> {
          * updateCheck methods are invoked when these faster
          * screenings fail.
          */
-
+        /*
+         * @param tclass 目标对象的类型
+         * @param vclass 目标对象里的字段的类型
+         * @param fieldName 目标对象里的字段的名字
+         */
         AtomicReferenceFieldUpdaterImpl(final Class<T> tclass,
                                         final Class<V> vclass,
                                         final String fieldName,
                                         final Class<?> caller) {
+            // 要更新的字段
             final Field field;
+            // 要更新字段的类型
             final Class<?> fieldClass;
+            // 要更新字段的修饰符
             final int modifiers;
             try {
+                // 获取要原子更新的字段
                 field = AccessController.doPrivileged(
                     new PrivilegedExceptionAction<Field>() {
                         public Field run() throws NoSuchFieldException {
                             return tclass.getDeclaredField(fieldName);
                         }
                     });
+                // 要更新字段的修饰符
                 modifiers = field.getModifiers();
+                // 判断调用方法是否可以访问字段
                 sun.reflect.misc.ReflectUtil.ensureMemberAccess(
                     caller, tclass, null, modifiers);
+                // 目标类的类加载器
                 ClassLoader cl = tclass.getClassLoader();
+                // 调用类的类加载器
                 ClassLoader ccl = caller.getClassLoader();
                 if ((ccl != null) && (ccl != cl) &&
                     ((cl == null) || !isAncestor(cl, ccl))) {
+                    // 检查包访问权限
                     sun.reflect.misc.ReflectUtil.checkPackageAccess(tclass);
                 }
+                // 获取要更新字段的类型
                 fieldClass = field.getType();
             } catch (PrivilegedActionException pae) {
                 throw new RuntimeException(pae.getException());
@@ -339,11 +370,14 @@ public abstract class AtomicReferenceFieldUpdater<T,V> {
                 throw new RuntimeException(ex);
             }
 
+            // 类型不一致
             if (vclass != fieldClass)
                 throw new ClassCastException();
+            // 不能是基本类型
             if (vclass.isPrimitive())
                 throw new IllegalArgumentException("Must be reference type");
 
+            // 必须是 volatile 修饰
             if (!Modifier.isVolatile(modifiers))
                 throw new IllegalArgumentException("Must be volatile type");
 
@@ -354,12 +388,15 @@ public abstract class AtomicReferenceFieldUpdater<T,V> {
             // If the updater refers to a protected field of a declaring class
             // outside the current package, the receiver argument will be
             // narrowed to the type of the accessing class.
+
+            // 被 protected 修饰 && tclass 是 caller 的子类吗 && 相同的加载器，相同的包名
             this.cclass = (Modifier.isProtected(modifiers) &&
                            tclass.isAssignableFrom(caller) &&
                            !isSamePackage(tclass, caller))
                           ? caller : tclass;
             this.tclass = tclass;
             this.vclass = vclass;
+            // 获取字段在 tclass 中的地址偏移量
             this.offset = U.objectFieldOffset(field);
         }
 
@@ -368,6 +405,7 @@ public abstract class AtomicReferenceFieldUpdater<T,V> {
          * classloader's delegation chain.
          * Equivalent to the inaccessible: first.isAncestor(second).
          */
+        // 如果可以在第一个类加载器的委托链中找到第二个类加载器，则返回 true
         private static boolean isAncestor(ClassLoader first, ClassLoader second) {
             ClassLoader acl = first;
             do {
@@ -430,6 +468,7 @@ public abstract class AtomicReferenceFieldUpdater<T,V> {
             throw new ClassCastException();
         }
 
+        // 原子更新
         public final boolean compareAndSet(T obj, V expect, V update) {
             accessCheck(obj);
             valueCheck(update);
@@ -443,6 +482,7 @@ public abstract class AtomicReferenceFieldUpdater<T,V> {
             return U.compareAndSwapObject(obj, offset, expect, update);
         }
 
+        // 无条件设置新值
         public final void set(T obj, V newValue) {
             accessCheck(obj);
             valueCheck(newValue);

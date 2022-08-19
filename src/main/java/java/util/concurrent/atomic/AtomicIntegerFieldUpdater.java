@@ -64,14 +64,15 @@ import sun.reflect.Reflection;
  * @author Doug Lea
  * @param <T> The type of the object holding the updatable field
  */
+// 对某个对象内部的 int 类型的字段做原子操作
 public abstract class AtomicIntegerFieldUpdater<T> {
     /**
      * Creates and returns an updater for objects with the given field.
      * The Class argument is needed to check that reflective types and
      * generic types match.
      *
-     * @param tclass the class of the objects holding the field
-     * @param fieldName the name of the field to be updated
+     * @param tclass the class of the objects holding the field 持有该对象的类
+     * @param fieldName the name of the field to be updated 要更新的字段的名字
      * @param <U> the type of instances of tclass
      * @return the updater
      * @throws IllegalArgumentException if the field is not a
@@ -381,16 +382,21 @@ public abstract class AtomicIntegerFieldUpdater<T> {
         AtomicIntegerFieldUpdaterImpl(final Class<T> tclass,
                                       final String fieldName,
                                       final Class<?> caller) {
+            // 更新的字段
             final Field field;
+            // 更新的字段的修饰符
             final int modifiers;
             try {
+                // 获取要更新字段的对象
                 field = AccessController.doPrivileged(
                     new PrivilegedExceptionAction<Field>() {
                         public Field run() throws NoSuchFieldException {
                             return tclass.getDeclaredField(fieldName);
                         }
                     });
+                // 获取修饰符
                 modifiers = field.getModifiers();
+                // 校验是否有访问权限
                 sun.reflect.misc.ReflectUtil.ensureMemberAccess(
                     caller, tclass, null, modifiers);
                 ClassLoader cl = tclass.getClassLoader();
@@ -405,9 +411,11 @@ public abstract class AtomicIntegerFieldUpdater<T> {
                 throw new RuntimeException(ex);
             }
 
+            // 必须是 int
             if (field.getType() != int.class)
                 throw new IllegalArgumentException("Must be integer type");
 
+            // 必须是 volatile 修饰
             if (!Modifier.isVolatile(modifiers))
                 throw new IllegalArgumentException("Must be volatile type");
 

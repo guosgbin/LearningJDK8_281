@@ -51,6 +51,7 @@ public class AtomicLongArray implements java.io.Serializable {
     private static final Unsafe unsafe = Unsafe.getUnsafe();
     // 数组的第一个元素相对该数组的地址偏移量
     private static final int base = unsafe.arrayBaseOffset(long[].class);
+    // 用于快速计算索引 i 处的相对地址偏移量
     private static final int shift;
     // 当前封装的数组
     private final long[] array;
