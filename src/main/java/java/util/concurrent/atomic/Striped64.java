@@ -158,7 +158,7 @@ abstract class Striped64 extends Number {
     }
 
     /** Number of CPUS, to place bound on table size */
-    // CPU 数量
+    // CPU 数量，用来决定数组的长度
     static final int NCPU = Runtime.getRuntime().availableProcessors();
 
     /**
@@ -171,13 +171,13 @@ abstract class Striped64 extends Number {
      * Base value, used mainly when there is no contention, but also as
      * a fallback during table initialization races. Updated via CAS.
      */
-    // base，主要在没有争用时使用，但也可作为表初始化 TODO-KWOK ?。通过 CAS 更新。
+    // base，主要在没有争用时使用，但也可作为表初始化
     transient volatile long base;
 
     /**
      * Spinlock (locked via CAS) used when resizing and/or creating Cells.
      */
-    // 自旋锁，在扩容或者创建 Cells 的时候使用
+    // 锁，在扩容和创建 cell 时使用，1-有锁状态， 0-无锁状态
     transient volatile int cellsBusy;
 
     /**
@@ -256,9 +256,8 @@ abstract class Striped64 extends Number {
              * v:
              */
             Cell[] as; Cell a; int n; long v;
-            // 这个 if 的条件是 cells 已经初始化了
-            if ((as = cells) != null && (n = as.length) > 0) {
-                // 这个条件说明 cell 处是 null，需要新建 cell 填充
+            if ((as = cells) != null && (n = as.length) > 0) { // 进入该分支说明 Cell 数组已经初始化了
+                // CASE(1.1) 加锁创建 Cell
                 if ((a = as[(n - 1) & h]) == null) {
                     if (cellsBusy == 0) {       // Try to attach new Cell
                         Cell r = new Cell(x);   // Optimistically create
@@ -287,21 +286,26 @@ abstract class Striped64 extends Number {
                             continue;           // Slot is now non-empty
                         }
                     }
+                    // 走到这里说明 锁被其他线程使用了
                     // 扩容意向设置为 false，不扩容，因为线程路由寻址的位置的元素是 null，不需要扩容
                     collide = false;
                 }
+                // CASE(1.2) 发生竞争，需要重置线程哈希值
                 else if (!wasUncontended)       // CAS already known to fail
                     wasUncontended = true;      // Continue after rehash
                 // 只有在经过上面两个 if 的情况后重置线程哈希值之后才会到这里
                 // 重置线程哈希值后，对新的哈希值路由寻址的 cell 进行 cas 操作
+                // CASE(1.3) 尝试 CAS 新映射的元素
                 else if (a.cas(v = a.value, ((fn == null) ? v + x : fn.applyAsLong(v, x))))
                     // 更新成功直接退出
                     break;
-                // 说明针对上面哈希寻址的 cell cas 更新失败了，则需要扩容
+                // CASE(1.4) 上面 1.3 CAS 元素失败后，判断是否需要扩容
                 else if (n >= NCPU || cells != as)
                     collide = false;            // At max size or stale
+                // CASE(1.5) 说明当前线程具备扩容条件，下次循环扩容
                 else if (!collide)
                     collide = true;
+                // CASE(1.6) 尝试扩容
                 else if (cellsBusy == 0 && casCellsBusy()) {
                     // 拿锁，扩容
                     try {
@@ -321,8 +325,7 @@ abstract class Striped64 extends Number {
                 h = advanceProbe(h);
             }
 
-            // 进入这个分支，说明 cell 数组还未初始化， 且是无锁状态，尝试获取锁，并初始化 cell 数组
-            else if (cellsBusy == 0 && cells == as && casCellsBusy()) {
+            else if (cellsBusy == 0 && cells == as && casCellsBusy()) { // 进入该分支说明 Cell 数组未初始化，创建 Cell 数组
                 // cell 数组是否初始化成功标记
                 boolean init = false;
                 try {                           // Initialize table
@@ -343,9 +346,7 @@ abstract class Striped64 extends Number {
                 if (init)
                     break;
             }
-            // 走到这里的条件是
-            // 未拿到锁，则去 cas 更新 base 值
-            else if (casBase(v = base, ((fn == null) ? v + x : fn.applyAsLong(v, x))))
+            else if (casBase(v = base, ((fn == null) ? v + x : fn.applyAsLong(v, x)))) // 进入该分支说明其他线程正在初始化 Cell 数组
                 // cas 更新 base 成功则退出自旋
                 break;                          // Fall back on using base
         }
