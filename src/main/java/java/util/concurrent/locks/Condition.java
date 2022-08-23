@@ -176,6 +176,7 @@ import java.util.Date;
  * @since 1.5
  * @author Doug Lea
  */
+// Condition 可以看做是 Obejct 类的 wait()、notify()、notifyAll()方法的替代品，与 Lock 配合使用。
 public interface Condition {
 
     /**
@@ -227,6 +228,16 @@ public interface Condition {
      *
      * @throws InterruptedException if the current thread is interrupted
      *         (and interruption of thread suspension is supported)
+     */
+    /*
+     * 使当前线程等待，直到它发出信号或被中断。
+     * 与此Condition关联的锁被自动释放，并且当前线程出于线程调度目的而被禁用并处于休眠状态，直到发生以下四种情况之一：
+     * 1.其他某个线程为此Condition调用了signal方法，而当前线程恰好被选为要被唤醒的线程；或者
+     * 2.其他一些线程为此Condition调用signalAll方法；或者
+     * 3.其他一些线程中断当前线程，支持中断线程挂起；或者
+     * 4.发生“虚假唤醒”
+     *
+     *
      */
     void await() throws InterruptedException;
 

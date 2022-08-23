@@ -164,6 +164,7 @@ import java.util.concurrent.TimeUnit;
  * @since 1.5
  * @author Doug Lea
  */
+// Lock 锁接口
 public interface Lock {
 
     /**
@@ -181,6 +182,7 @@ public interface Lock {
      * circumstances and the exception type must be documented by that
      * {@code Lock} implementation.
      */
+    // 尝试获取锁
     void lock();
 
     /**
@@ -229,6 +231,7 @@ public interface Lock {
      *         interrupted while acquiring the lock (and interruption
      *         of lock acquisition is supported)
      */
+    // 尝试获取锁，如果锁不可用，当前等待的线程是可以被其他线程调用中断方法 停止获取锁
     void lockInterruptibly() throws InterruptedException;
 
     /**
@@ -258,6 +261,7 @@ public interface Lock {
      * @return {@code true} if the lock was acquired and
      *         {@code false} otherwise
      */
+    // 当锁是空闲的时候，才去获取锁
     boolean tryLock();
 
     /**
@@ -318,6 +322,12 @@ public interface Lock {
      *         while acquiring the lock (and interruption of lock
      *         acquisition is supported)
      */
+    /*
+     * 在指定时间内尝试获取锁，在下面几种情况会退出
+     * 1.当前线程拿到锁了；
+     * 2.当前线程被中断了；
+     * 3.最大等待时间已经到了；
+     */
     boolean tryLock(long time, TimeUnit unit) throws InterruptedException;
 
     /**
@@ -332,6 +342,7 @@ public interface Lock {
      * Any restrictions and the exception
      * type must be documented by that {@code Lock} implementation.
      */
+    // 释放锁
     void unlock();
 
     /**
@@ -352,6 +363,10 @@ public interface Lock {
      * @return A new {@link Condition} instance for this {@code Lock} instance
      * @throws UnsupportedOperationException if this {@code Lock}
      *         implementation does not support conditions
+     */
+    /*
+     * 返回绑定到此 Lock 实例的 Condition 实例。
+     * 在等待条件之前，锁必须由当前线程持有。调用 Condition.await() 将在等待之前自动释放锁，并在等待返回之前重新获取锁。
      */
     Condition newCondition();
 }
