@@ -117,9 +117,22 @@ import sun.misc.Unsafe;
  *   }
  * }}</pre>
  */
+
+/**
+ * ① park函数，阻塞线程，并且该线程在下列情况发生之前都会被阻塞：
+ *      ① 调用unpark函数，释放该线程的许可。
+ *      ② 该线程被中断。
+ *      ③ 设置的时间到了。并且，当time为绝对时间时，isAbsolute为true，否则，isAbsolute为false。当time为0时，表示无限等待，直到unpark发生。
+ *      4.还有可能是被虚假唤醒了
+ * ② unpark函数，释放线程的许可，即激活调用park后阻塞的线程。这个函数不是安全的，调用这个函数时要确保线程依旧存活。
+ */
 public class LockSupport {
+    // 不让外部创建实例
     private LockSupport() {} // Cannot be instantiated.
 
+    /*
+     * 记录了当前线程阻塞时是被谁阻塞的，用于线程监控和分析
+     */
     private static void setBlocker(Thread t, Object arg) {
         // Even though volatile, hotspot doesn't need a write barrier here.
         UNSAFE.putObject(t, parkBlockerOffset, arg);
@@ -138,6 +151,7 @@ public class LockSupport {
      */
     public static void unpark(Thread thread) {
         if (thread != null)
+            // 唤醒线程
             UNSAFE.unpark(thread);
     }
 
@@ -172,6 +186,7 @@ public class LockSupport {
     public static void park(Object blocker) {
         Thread t = Thread.currentThread();
         setBlocker(t, blocker);
+        // 阻塞线程
         UNSAFE.park(false, 0L);
         setBlocker(t, null);
     }
@@ -212,6 +227,7 @@ public class LockSupport {
         if (nanos > 0) {
             Thread t = Thread.currentThread();
             setBlocker(t, blocker);
+            // 阻塞线程 nanos 时间
             UNSAFE.park(false, nanos);
             setBlocker(t, null);
         }
@@ -253,6 +269,7 @@ public class LockSupport {
     public static void parkUntil(Object blocker, long deadline) {
         Thread t = Thread.currentThread();
         setBlocker(t, blocker);
+        // true 表示绝对时间，阻塞到 deadline 为止
         UNSAFE.park(true, deadline);
         setBlocker(t, null);
     }
@@ -300,6 +317,12 @@ public class LockSupport {
      * the thread to park in the first place. Callers may also determine,
      * for example, the interrupt status of the thread upon return.
      */
+    /*
+     * boolean 类型表示的是否是绝对时间， fasle 表示不是绝对时间 true 表示是绝对时间
+     * 第二参数 0 表示一直阻塞
+     *
+     * 注意：这个是会响应中断的
+     */
     public static void park() {
         UNSAFE.park(false, 0L);
     }
@@ -335,6 +358,7 @@ public class LockSupport {
      */
     public static void parkNanos(long nanos) {
         if (nanos > 0)
+            // 阻塞 nanos 秒
             UNSAFE.park(false, nanos);
     }
 
@@ -369,6 +393,7 @@ public class LockSupport {
      *        to wait until
      */
     public static void parkUntil(long deadline) {
+        // 阻塞到绝对时间 deadline 为止
         UNSAFE.park(true, deadline);
     }
 
@@ -376,6 +401,7 @@ public class LockSupport {
      * Returns the pseudo-randomly initialized or updated secondary seed.
      * Copied from ThreadLocalRandom due to package access restrictions.
      */
+    // 从 ThreadLocalRandom 里抄过来的，后面分析
     static final int nextSecondarySeed() {
         int r;
         Thread t = Thread.currentThread();
