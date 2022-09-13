@@ -169,6 +169,11 @@ public class CountDownLatch {
             return getState();
         }
 
+        /*
+         * 在CountDownLatch中，同步状态State表示CountDownLatch的计数器的初始值，
+         * 当State==0时，表示无锁状态，且一旦State变为0，就永远处于无锁状态了，此时所有线程在await上等待的线程都可以继续执行。
+         * 而在ReentrantLock中，State==0时，虽然也表示无锁状态，但是只有一个线程可以重置State的值。这就是共享锁的含义。
+         */
         protected int tryAcquireShared(int acquires) {
             return (getState() == 0) ? 1 : -1;
         }
@@ -176,11 +181,14 @@ public class CountDownLatch {
         protected boolean tryReleaseShared(int releases) {
             // Decrement count; signal when transition to zero
             for (;;) {
+                // 获取同步的状态值
                 int c = getState();
                 if (c == 0)
                     return false;
+                // 每次就 -1
                 int nextc = c-1;
                 if (compareAndSetState(c, nextc))
+                    // nextc == 0 就说明已经减到 0了
                     return nextc == 0;
             }
         }
@@ -226,6 +234,18 @@ public class CountDownLatch {
      *
      * @throws InterruptedException if the current thread is interrupted
      *         while waiting
+     */
+    /*
+     * 让当前线程等待直到倒计时到 0，除非线程被中断。
+     *
+     * 1. 如果当前计数为零，则此方法立即返回。
+     * 2. 如果当前计数大于零，则当前线程出于线程调度目的而被禁用并处于休眠状态，直到发生以下两种情况之一：
+     *      2.1 由于调用了countDown方法，计数达到零；
+     *      2.2 或者其他一些线程中断当前线程。
+     * 如果当前线程：
+     * 1. 在进入此方法时设置其中断状态；
+     * 2. 或者等待时被打断，
+     * 然后抛出InterruptedException并清除当前线程的中断状态
      */
     public void await() throws InterruptedException {
         sync.acquireSharedInterruptibly(1);
@@ -286,6 +306,11 @@ public class CountDownLatch {
      * thread scheduling purposes.
      *
      * <p>If the current count equals zero then nothing happens.
+     */
+    /*
+     * 减少锁存器的计数，如果计数达到零，则释放所有等待线程。
+     * 如果当前计数大于零，则递减。如果新计数为零，则重新启用所有等待线程以进行线程调度。
+     * 如果当前计数为零，则不会发生任何事情。
      */
     public void countDown() {
         sync.releaseShared(1);
