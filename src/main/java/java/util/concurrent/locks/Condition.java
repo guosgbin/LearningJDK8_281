@@ -176,7 +176,13 @@ import java.util.Date;
  * @since 1.5
  * @author Doug Lea
  */
-// Condition 可以看做是 Obejct 类的 wait()、notify()、notifyAll()方法的替代品，与 Lock 配合使用。
+/*
+ * Lock 代替了 Synchronized 方法和语句的使用，Condition 代替了 Object 监视器方法的使用；
+ * Condition 的使用必须和 Lock 组合使用；
+ * 需要注意的是，Condition 是一个普通的对象，可以作为 Synchronized 的锁对象，但是建议不要这样使用。
+ *
+ * Condition 可以看做是 Obejct 类的 wait()、notify()、notifyAll()方法的替代品，与 Lock 配合使用。
+ */
 public interface Condition {
 
     /**
