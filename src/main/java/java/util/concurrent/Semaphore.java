@@ -153,6 +153,14 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
  * @since 1.5
  * @author Doug Lea
  */
+/*
+ * 信号量，持有许多许可证。获取许可证的时候，并没有使用他，只是做计数
+ *
+ * 当信号量中只初始化一个许可证的时候，可以看成是一个独占锁，因为只有两个状态，一个有许可证，一个无许可证，
+ * 但是这样做的话和 Lock 锁不同的地方是，信号量可以被其他线程释放，这可以应用在死锁恢复的场景
+ *
+ * Doug Lea 推荐用公平锁，这样可以防止某些线程饥饿，不过非公平锁的吞吐量要好一点
+ */
 public class Semaphore implements java.io.Serializable {
     private static final long serialVersionUID = -3222578661600680210L;
     /** All mechanics via AbstractQueuedSynchronizer subclass */
@@ -166,6 +174,7 @@ public class Semaphore implements java.io.Serializable {
     abstract static class Sync extends AbstractQueuedSynchronizer {
         private static final long serialVersionUID = 1192457210091910933L;
 
+        // 初始化许可证的个数
         Sync(int permits) {
             setState(permits);
         }
@@ -174,7 +183,11 @@ public class Semaphore implements java.io.Serializable {
             return getState();
         }
 
+        /**
+         * 非公平锁获取许可证
+         */
         final int nonfairTryAcquireShared(int acquires) {
+            // 自旋
             for (;;) {
                 int available = getState();
                 int remaining = available - acquires;
@@ -184,6 +197,9 @@ public class Semaphore implements java.io.Serializable {
             }
         }
 
+        /**
+         * 归还许可证
+         */
         protected final boolean tryReleaseShared(int releases) {
             for (;;) {
                 int current = getState();
@@ -225,6 +241,9 @@ public class Semaphore implements java.io.Serializable {
             super(permits);
         }
 
+        /**
+         * 非公平锁获取许可证
+         */
         protected int tryAcquireShared(int acquires) {
             return nonfairTryAcquireShared(acquires);
         }
@@ -240,10 +259,21 @@ public class Semaphore implements java.io.Serializable {
             super(permits);
         }
 
+        /**
+         * 公平锁，自旋尝试获取共享锁
+         *
+         * 返回
+         * -1 表示已经有线程在等待了
+         * >= 0 表示获取许可证成功
+         * < 0 许可证不够，有一种 -1 表示已经有线程在等待了
+         */
         protected int tryAcquireShared(int acquires) {
+            // 自旋
             for (;;) {
+                // 假如阻塞队列中有线程节点在等待，那么返回 -1
                 if (hasQueuedPredecessors())
                     return -1;
+                // 获取许可证的个数
                 int available = getState();
                 int remaining = available - acquires;
                 if (remaining < 0 ||
@@ -261,6 +291,7 @@ public class Semaphore implements java.io.Serializable {
      *        This value may be negative, in which case releases
      *        must occur before any acquires will be granted.
      */
+    // 默认创建的是非公平的信号量，permits 可能为负数
     public Semaphore(int permits) {
         sync = new NonfairSync(permits);
     }
@@ -276,6 +307,7 @@ public class Semaphore implements java.io.Serializable {
      *        first-in first-out granting of permits under contention,
      *        else {@code false}
      */
+    // 指定创建公平信号量和非公平信号量，permits 可以为负数
     public Semaphore(int permits, boolean fair) {
         sync = fair ? new FairSync(permits) : new NonfairSync(permits);
     }
@@ -308,6 +340,8 @@ public class Semaphore implements java.io.Serializable {
      *
      * @throws InterruptedException if the current thread is interrupted
      */
+    // 尝试获取一个许可证，
+    // 当许可证用完了，就会阻塞直到有资源了或者线程被中断了
     public void acquire() throws InterruptedException {
         sync.acquireSharedInterruptibly(1);
     }
@@ -422,6 +456,7 @@ public class Semaphore implements java.io.Serializable {
      * Correct usage of a semaphore is established by programming convention
      * in the application.
      */
+    // 释放许可证
     public void release() {
         sync.releaseShared(1);
     }
