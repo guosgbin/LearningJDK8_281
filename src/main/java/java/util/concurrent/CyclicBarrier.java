@@ -148,6 +148,12 @@ public class CyclicBarrier {
      * There need not be an active generation if there has been a break
      * but no subsequent reset.
      */
+    // 屏障的每次使用都表示为一个生成实例。
+    // 每当栅栏被触发或重置时，生成就会发生变化。
+    // 可能有许多代与使用屏障的线程相关联
+    // 由于锁定可能分配给等待线程的不确定方式
+    // 但一次只能其中一个处于活动状态（ count适用的那个）并且所有其余的要么坏要么绊倒。
+    // 如果有中断但没有后续重置，则不需要活动生成。
     private static class Generation {
         boolean broken = false;
     }
@@ -157,10 +163,13 @@ public class CyclicBarrier {
     /** Condition to wait on until tripped */
     private final Condition trip = lock.newCondition();
     /** The number of parties */
+    // 线程数
     private final int parties;
     /* The command to run when tripped */
+    // 最后一个通过的线程执行的任务，可以为 null，代表不执行
     private final Runnable barrierCommand;
     /** The current generation */
+    // 代
     private Generation generation = new Generation();
 
     /**
@@ -168,6 +177,7 @@ public class CyclicBarrier {
      * on each generation.  It is reset to parties on each new
      * generation or when broken.
      */
+    // 表示当前代中还有多少个线程未到达
     private int count;
 
     /**
@@ -176,9 +186,12 @@ public class CyclicBarrier {
      */
     private void nextGeneration() {
         // signal completion of last generation
+        // 唤醒所有等待的线程
         trip.signalAll();
         // set up next generation
+        // 重置 count
         count = parties;
+        // 开启下一代
         generation = new Generation();
     }
 
@@ -187,13 +200,28 @@ public class CyclicBarrier {
      * Called only while holding lock.
      */
     private void breakBarrier() {
+        // 打断当前代
         generation.broken = true;
+        // 重置 count
         count = parties;
+        // 唤醒所有 await 的线程
         trip.signalAll();
     }
 
     /**
      * Main barrier code, covering the various policies.
+     *
+     * 阻塞当前线程直到所有的线程都在此代（屏障）上调用了 await 方法，或者等待超时了
+     * 不是最后一个调用 await 的方法会在以下几种情况发生前一直阻塞：
+     * 1. 最后一个线程调了 await 方法，会唤醒所有阻塞的线程；
+     * 2. 外部线程中断了当前线程，当前代（屏障）会被打破，会唤醒所有阻塞的线程；
+     * 3. 外部线程中断了某个阻塞中的线程，当前代（屏障）会被打破，会唤醒所有阻塞的线程；
+     * 4. 支持超时的模式下，当前线程的阻塞的时间到了，则会打破当前代（屏障），会唤醒所有阻塞的线程；
+     * 5. 支持超时的模式下，别的线程的阻塞的时间到了，则会打破当前代（屏障），会唤醒所有阻塞的线程；
+     * 6. 外部线程调用了 CyclicBarrier#reset 方法打破了当前代（屏障），会唤醒所有阻塞的线程；
+     *
+     * @param timed 是否支持超时
+     * @param nanos 超时时间
      */
     private int dowait(boolean timed, long nanos)
         throws InterruptedException, BrokenBarrierException,
@@ -201,58 +229,86 @@ public class CyclicBarrier {
         final ReentrantLock lock = this.lock;
         lock.lock();
         try {
+            // 创建一个"代"
             final Generation g = generation;
 
             if (g.broken)
+                // 如果当前代是被打破状态，直接抛出异常
                 throw new BrokenBarrierException();
 
             if (Thread.interrupted()) {
+                // 如果当前线程被中断，则打断当前代
                 breakBarrier();
                 throw new InterruptedException();
             }
 
+            // index 的作用是，找到最后一个 await 的线程来调用 barrierCommand 任务
             int index = --count;
             if (index == 0) {  // tripped
+                // 标记执行任务是否是正常执行结束，false 表示有问题
                 boolean ranAction = false;
                 try {
                     final Runnable command = barrierCommand;
                     if (command != null)
+                        // 执行任务
                         command.run();
                     ranAction = true;
+                    // 当前代结束，开启下一代
                     nextGeneration();
                     return 0;
                 } finally {
                     if (!ranAction)
+                        // 执行任务发生异常，打断当前代
                         breakBarrier();
                 }
             }
 
+            // 走到这里说明当前线程不是最后一个进入的线程
+
             // loop until tripped, broken, interrupted, or timed out
+            // 自旋，直到条件满足，当前代被打破，当前线程被中断，或者超时
             for (;;) {
                 try {
+                    // timed false 表示不带超时的条件，表示一直阻塞
                     if (!timed)
+                        // 将当前线程封装成节点加入到 condition 队列中等待被唤醒
                         trip.await();
                     else if (nanos > 0L)
+                        // 带超时的 await
                         nanos = trip.awaitNanos(nanos);
                 } catch (InterruptedException ie) {
+                    // 走到到这里面说明被中断了，
+                    // condition 的 await 方法抛出异常的地方是在 condition 队列中被中断，才会抛出中断异常
                     if (g == generation && ! g.broken) {
+                        // 说明当前代没有被打破，需要打破当前代，并唤醒所有等待的线程
                         breakBarrier();
+                        // 继续向外抛异常
                         throw ie;
                     } else {
                         // We're about to finish waiting even if we had not
                         // been interrupted, so this interrupt is deemed to
                         // "belong" to subsequent execution.
+                        // 整个中断标记
                         Thread.currentThread().interrupt();
                     }
+                    // 到这里当前代肯定是被打破了的
                 }
 
+                // 1.正常情况，当前 barrier 已经开启了新的一代
+                // 2.当前代被打断了
+                // 3.当前代超时了
+
                 if (g.broken)
+                    // 说明当前代被打破了，抛个异常
                     throw new BrokenBarrierException();
 
                 if (g != generation)
+                    // 说明当前代正常结束了，直接返回
+                    // 正常结束时在最后一个线程里面调用了 CyclicBarrier.nextGeneration 方法开启下一代
                     return index;
 
                 if (timed && nanos <= 0L) {
+                    // 说明当前代超时了，需要打破当前代
                     breakBarrier();
                     throw new TimeoutException();
                 }
@@ -356,6 +412,22 @@ public class CyclicBarrier {
      *         waiting, or the barrier was reset, or the barrier was
      *         broken when {@code await} was called, or the barrier
      *         action (if present) failed due to an exception
+     */
+    /*
+     * 等到所有各方都在此屏障上调用了await 。
+     * 如果当前线程不是最后到达的，则出于线程调度目的将其禁用并处于休眠状态，直到发生以下情况之一：
+     * 1. 最后一个线程到达；
+     * 2. 其他一些线程中断当前线程；
+     * 3. 其他一些线程中断了其他等待线程之一；
+     * 4. 其他一些线程在等待屏障时超时；
+     * 5. 其他一些线程在此屏障上调用reset；
+     *
+     * 如果当前线程：
+     * 在进入此方法时设置其中断状态或者等待时被打断，然后抛出InterruptedException并清除当前线程的中断状态。
+     *
+     * 如果在任何线程等待时屏障被reset ，或者在调用await时屏障被破坏，或者在任何线程正在等待时，则抛出BrokenBarrierException 。
+     * 如果任何线程在等待时被中断，那么所有其他等待的线程都会抛出BrokenBarrierException并且屏障处于损坏状态。
+     * 如果当前线程是最后到达的线程，并且在构造函数中提供了非空屏障操作，则当前线程在允许其他线程继续之前运行该操作。如果在屏障操作期间发生异常，则该异常将在当前线程中传播，并且屏障处于损坏状态。
      */
     public int await() throws InterruptedException, BrokenBarrierException {
         try {
