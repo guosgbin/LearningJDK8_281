@@ -177,9 +177,6 @@ public final class LocalDateTime
      * @return the current date-time using the system clock and default time-zone, not null
      */
     public static LocalDateTime now() {
-        // sou
-        // sout
-        System.out.println("宋晓龙");
         return now(Clock.systemDefaultZone());
     }
 
