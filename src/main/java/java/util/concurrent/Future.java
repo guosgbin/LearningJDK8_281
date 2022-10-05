@@ -116,6 +116,17 @@ public interface Future<V> {
      * typically because it has already completed normally;
      * {@code true} otherwise
      */
+    /*
+     * 尝试取消这个任务。
+     * 在下面几种情况会失败：
+     * 1.这个任务已经执行了；
+     * 2.这个任务已经被取消了；
+     * 3.因为其他某种原因无法取消
+     * 如果取消成功，并且cancel 时这个任务还未启动，则这个任务不应该执行。
+     * 如果任务已经开始，mayInterruptIfRunning 参数确定是否执行此任务的线程应该以停止任务被中断。
+     *
+     * 此方法返回后，后续调用isDone()将始终返回true 。 随后调用isCancelled()总是返回true如果此方法返回true 。
+     */
     boolean cancel(boolean mayInterruptIfRunning);
 
     /**
@@ -124,6 +135,7 @@ public interface Future<V> {
      *
      * @return {@code true} if this task was cancelled before it completed
      */
+    // 如果此任务在正常完成之前被取消，则返回 true
     boolean isCancelled();
 
     /**
@@ -135,6 +147,8 @@ public interface Future<V> {
      *
      * @return {@code true} if this task completed
      */
+    // 返回 true 表示任务已经完成
+    // 完成的情况可能是， 正常关闭、发生异常、或者被取消了。这些情况该方法都会返回 true
     boolean isDone();
 
     /**
@@ -148,6 +162,7 @@ public interface Future<V> {
      * @throws InterruptedException if the current thread was interrupted
      * while waiting
      */
+    // 等待任务完成，返回计算结果
     V get() throws InterruptedException, ExecutionException;
 
     /**
@@ -164,6 +179,7 @@ public interface Future<V> {
      * while waiting
      * @throws TimeoutException if the wait timed out
      */
+    // 等待任务完成，返回计算结果，支持超时
     V get(long timeout, TimeUnit unit)
         throws InterruptedException, ExecutionException, TimeoutException;
 }
