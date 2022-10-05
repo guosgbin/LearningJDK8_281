@@ -1697,7 +1697,14 @@ public abstract class AbstractQueuedSynchronizer
      * is not the first queued thread.  Used only as a heuristic in
      * ReentrantReadWriteLock.
      */
-    // 返回 true 表示队列中第一个节点是是独占模式的节点
+    /*
+     * 如果明显的第一个排队线程（如果存在）正在独占模式下等待，则返回{@code true}。
+     * 如果此方法返回{@code true}，并且当前线程正试图在共享模式下获取（即，此方法从{@link#tryAcquireShared}调用），
+     * 则可以保证当前线程不是第一个排队线程。
+     * 仅在ReentrantReadWriteLock中用作启发式。
+     */
+    // 返回 true 表示队列中第一个节点是是独占模式的节点，
+    // 这里是防止获取写锁的线程饥饿
     final boolean apparentlyFirstQueuedIsExclusive() {
         Node h, s;
         // case1 有 head 节点
