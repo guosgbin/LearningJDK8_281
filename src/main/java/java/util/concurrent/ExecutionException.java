@@ -44,6 +44,7 @@ package java.util.concurrent;
  * @since 1.5
  * @author Doug Lea
  */
+// 执行器的异常
 public class ExecutionException extends Exception {
     private static final long serialVersionUID = 7830266012832686185L;
 

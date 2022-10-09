@@ -68,6 +68,15 @@ import sun.security.util.SecurityConstants;
  * @since 1.5
  * @author Doug Lea
  */
+
+/*
+ * 执行器的工厂类
+ * 1. 返回默认配置的一些执行器 ExecutorService；
+ * 2. 返回默认配置的一些执行器 ScheduledExecutorService；
+ * 3. 返回包装的执行器 ExecutorService，
+ * 创建并返回“包装”ExecutorService的方法，该方法通过使特定于实现的方法不可访问来禁用重新配置。
+ *
+ */
 public class Executors {
 
     /**
@@ -85,6 +94,7 @@ public class Executors {
      * @return the newly created thread pool
      * @throws IllegalArgumentException if {@code nThreads <= 0}
      */
+    // 创建一个固定线程数的线程池，无界的阻塞队列
     public static ExecutorService newFixedThreadPool(int nThreads) {
         return new ThreadPoolExecutor(nThreads, nThreads,
                                       0L, TimeUnit.MILLISECONDS,
@@ -147,6 +157,7 @@ public class Executors {
      * @throws NullPointerException if threadFactory is null
      * @throws IllegalArgumentException if {@code nThreads <= 0}
      */
+    // 创建固定线程数的线程池，指定线程工厂
     public static ExecutorService newFixedThreadPool(int nThreads, ThreadFactory threadFactory) {
         return new ThreadPoolExecutor(nThreads, nThreads,
                                       0L, TimeUnit.MILLISECONDS,
@@ -167,6 +178,7 @@ public class Executors {
      *
      * @return the newly created single-threaded Executor
      */
+    // 创建单个线程的线程池
     public static ExecutorService newSingleThreadExecutor() {
         return new FinalizableDelegatedExecutorService
             (new ThreadPoolExecutor(1, 1,
@@ -188,6 +200,8 @@ public class Executors {
      * @return the newly created single-threaded Executor
      * @throws NullPointerException if threadFactory is null
      */
+    // 创建单个线程的线程池，指定线程工厂， ，、
+
     public static ExecutorService newSingleThreadExecutor(ThreadFactory threadFactory) {
         return new FinalizableDelegatedExecutorService
             (new ThreadPoolExecutor(1, 1,
@@ -212,6 +226,7 @@ public class Executors {
      *
      * @return the newly created thread pool
      */
+    // 创建线程数在[0, Integer.MAX_VALUE]之间的线程池
     public static ExecutorService newCachedThreadPool() {
         return new ThreadPoolExecutor(0, Integer.MAX_VALUE,
                                       60L, TimeUnit.SECONDS,
@@ -227,6 +242,7 @@ public class Executors {
      * @return the newly created thread pool
      * @throws NullPointerException if threadFactory is null
      */
+    // 创建线程数在[0, Integer.MAX_VALUE]之间的线程池，指定线程工厂
     public static ExecutorService newCachedThreadPool(ThreadFactory threadFactory) {
         return new ThreadPoolExecutor(0, Integer.MAX_VALUE,
                                       60L, TimeUnit.SECONDS,
@@ -247,6 +263,7 @@ public class Executors {
      * guaranteed not to be reconfigurable to use additional threads.
      * @return the newly created scheduled executor
      */
+    // 创建仅有单个线程的调度线程池
     public static ScheduledExecutorService newSingleThreadScheduledExecutor() {
         return new DelegatedScheduledExecutorService
             (new ScheduledThreadPoolExecutor(1));
@@ -268,6 +285,7 @@ public class Executors {
      * @return a newly created scheduled executor
      * @throws NullPointerException if threadFactory is null
      */
+    // 创建仅有单个线程的调度线程池，指定线程池工厂
     public static ScheduledExecutorService newSingleThreadScheduledExecutor(ThreadFactory threadFactory) {
         return new DelegatedScheduledExecutorService
             (new ScheduledThreadPoolExecutor(1, threadFactory));
@@ -281,6 +299,7 @@ public class Executors {
      * @return a newly created scheduled thread pool
      * @throws IllegalArgumentException if {@code corePoolSize < 0}
      */
+    // 创建指定核心线程数的调度线程池
     public static ScheduledExecutorService newScheduledThreadPool(int corePoolSize) {
         return new ScheduledThreadPoolExecutor(corePoolSize);
     }
@@ -296,6 +315,7 @@ public class Executors {
      * @throws IllegalArgumentException if {@code corePoolSize < 0}
      * @throws NullPointerException if threadFactory is null
      */
+    // 创建指定核心线程数的调度线程池，指定线程工厂
     public static ScheduledExecutorService newScheduledThreadPool(
             int corePoolSize, ThreadFactory threadFactory) {
         return new ScheduledThreadPoolExecutor(corePoolSize, threadFactory);
@@ -311,6 +331,9 @@ public class Executors {
      * @return an {@code ExecutorService} instance
      * @throws NullPointerException if executor null
      */
+    // 根据传入的 ExecutorService 对象，返回一个包装后的 ExecutorService
+    // 包装后的 ExecutorService 是不允许进行参数调节的。
+    // 因为 DelegatedExecutorService 是直接继承 AbstractExecutorService 的，没有调参的 api
     public static ExecutorService unconfigurableExecutorService(ExecutorService executor) {
         if (executor == null)
             throw new NullPointerException();
@@ -327,6 +350,8 @@ public class Executors {
      * @return a {@code ScheduledExecutorService} instance
      * @throws NullPointerException if executor null
      */
+    // 根据传入的 ScheduledExecutorService 对象，返回一个包装后的 ScheduledExecutorService
+    // 包装后的 ScheduledExecutorService 是不允许进行参数调节的。
     public static ScheduledExecutorService unconfigurableScheduledExecutorService(ScheduledExecutorService executor) {
         if (executor == null)
             throw new NullPointerException();
@@ -349,6 +374,7 @@ public class Executors {
      * of the thread created by this factory.
      * @return a thread factory
      */
+    // 返回默认的线程工厂
     public static ThreadFactory defaultThreadFactory() {
         return new DefaultThreadFactory();
     }
@@ -401,6 +427,7 @@ public class Executors {
      * @return a callable object
      * @throws NullPointerException if task null
      */
+    // 传入 Runnable 返回一个适配的 Callable 对象
     public static <T> Callable<T> callable(Runnable task, T result) {
         if (task == null)
             throw new NullPointerException();
@@ -414,6 +441,7 @@ public class Executors {
      * @return a callable object
      * @throws NullPointerException if task null
      */
+    // 传入 Runnable 返回一个适配的 Callable 对象
     public static Callable<Object> callable(Runnable task) {
         if (task == null)
             throw new NullPointerException();
@@ -593,6 +621,7 @@ public class Executors {
     /**
      * The default thread factory
      */
+    // 默认的线程工厂
     static class DefaultThreadFactory implements ThreadFactory {
         private static final AtomicInteger poolNumber = new AtomicInteger(1);
         private final ThreadGroup group;
@@ -623,6 +652,8 @@ public class Executors {
     /**
      * Thread factory capturing access control context and class loader
      */
+    // 通过这种方式创建出来的线程，将与创建privilegedThreadFactory的线程拥有相同的访问权限、 AccessControlContext、ContextClassLoader。
+    // 如果不使用privilegedThreadFactory， 线程池创建的线程将从在需要新线程时调用execute或submit的客户程序中继承访问权限。
     static class PrivilegedThreadFactory extends DefaultThreadFactory {
         private final AccessControlContext acc;
         private final ClassLoader ccl;
@@ -644,6 +675,7 @@ public class Executors {
         }
 
         public Thread newThread(final Runnable r) {
+            // 包装一下
             return super.newThread(new Runnable() {
                 public void run() {
                     AccessController.doPrivileged(new PrivilegedAction<Void>() {
@@ -662,6 +694,8 @@ public class Executors {
      * A wrapper class that exposes only the ExecutorService methods
      * of an ExecutorService implementation.
      */
+    // 该类直接继承 AbstractExecutorService，
+    // 包装一下是为了不让调用方调节委托的 ExecutorService 的参数，只暴露 AbstractExecutorService 的方法
     static class DelegatedExecutorService extends AbstractExecutorService {
         private final ExecutorService e;
         DelegatedExecutorService(ExecutorService executor) { e = executor; }
@@ -717,6 +751,7 @@ public class Executors {
      * A wrapper class that exposes only the ScheduledExecutorService
      * methods of a ScheduledExecutorService implementation.
      */
+    // 只提供了 ScheduledExecutorService 的 api，防止调用方调参
     static class DelegatedScheduledExecutorService
             extends DelegatedExecutorService
             implements ScheduledExecutorService {
