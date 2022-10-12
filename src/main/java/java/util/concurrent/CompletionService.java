@@ -58,6 +58,19 @@ package java.util.concurrent;
  * actions taken by that task, which in turn <i>happen-before</i>
  * actions following a successful return from the corresponding {@code take()}.
  */
+
+/*
+ * 将新异步任务的生成与已完成任务的结果的消耗分离的服务。
+ * 生产者{@code submit}任务以执行。
+ * 消费者{@code take}已完成的任务，并按照完成的顺序处理结果。
+ *
+ * 例如，{@code CompletionService}可以用于管理异步I/O，其中执行读取的任务在程序或系统的一个部分中提交，
+ * 然后执行在程序的不同部分，当读取完成时，可能以不同于请求的顺序执行
+ *
+ * 通常，{@code CompletionService}依赖于单独的{@link Executor}来实际执行任务，
+ * 在这种情况下，{@code CompletionService}仅管理内部完成队列。
+ * {@link ExecutorCompletionService}类提供了这种方法的实现
+ */
 public interface CompletionService<V> {
     /**
      * Submits a value-returning task for execution and returns a Future
@@ -70,6 +83,7 @@ public interface CompletionService<V> {
      *         scheduled for execution
      * @throws NullPointerException if the task is null
      */
+    // 提交一个 Callable 任务，任务完成后这个任务可能会被 take 或者 poll
     Future<V> submit(Callable<V> task);
 
     /**
@@ -86,6 +100,7 @@ public interface CompletionService<V> {
      *         scheduled for execution
      * @throws NullPointerException if the task is null
      */
+    // 提交一个 Runnable 任务
     Future<V> submit(Runnable task, V result);
 
     /**
@@ -95,6 +110,7 @@ public interface CompletionService<V> {
      * @return the Future representing the next completed task
      * @throws InterruptedException if interrupted while waiting
      */
+    // 获取并移除表示下一个已完成任务的Future，如果没有则阻塞等待
     Future<V> take() throws InterruptedException;
 
     /**
@@ -104,6 +120,7 @@ public interface CompletionService<V> {
      * @return the Future representing the next completed task, or
      *         {@code null} if none are present
      */
+    // 获取并移除表示下一个已完成任务的Future，如果没有则返回 null
     Future<V> poll();
 
     /**
@@ -120,5 +137,7 @@ public interface CompletionService<V> {
      *         before one is present
      * @throws InterruptedException if interrupted while waiting
      */
+    // 获取并移除表示下一个已完成任务的Future，如果没有则阻塞等待
+    // 支持超时
     Future<V> poll(long timeout, TimeUnit unit) throws InterruptedException;
 }

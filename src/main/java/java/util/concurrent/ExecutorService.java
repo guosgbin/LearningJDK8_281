@@ -134,6 +134,76 @@ import java.util.Collection;
  * @since 1.5
  * @author Doug Lea
  */
+
+/*
+ * 一个Executor ，它提供了管理终止的方法和可以生成Future以跟踪一个或多个异步任务的进度的方法。
+ * 可以关闭ExecutorService ，这将导致它拒绝新任务。
+ * 提供了两种不同的方法来关闭ExecutorService 。
+ * 1. shutdown方法将允许先前提交的任务在终止之前执行，
+ * 2. shutdownNow方法阻止等待的任务启动并尝试停止当前正在执行的任务。
+ * 终止后，执行者没有正在执行的任务，没有等待执行的任务，也没有新的任务可以提交。
+ * 应关闭未使用的ExecutorService以允许回收其资源。
+ *
+ * 方法submit通过创建和返回可用于取消执行和/或等待完成的Future扩展了基本方法Executor.execute(Runnable) 。
+ * 方法invokeAny和invokeAll执行最常用的批量执行形式，执行一组任务，然后等待至少一个或全部完成。
+ *
+ * （类ExecutorCompletionService可用于编写这些方法的自定义变体。）
+ * Executors类为此包中提供的执行器服务提供工厂方法。
+ *
+ * class NetworkService implements Runnable {
+ *     private final ServerSocket serverSocket;
+ *     private final ExecutorService pool;
+ *
+ *     public NetworkService(int port, int poolSize) throws IOException {
+ *         serverSocket = new ServerSocket(port);
+ *         pool = Executors.newFixedThreadPool(poolSize);
+ *     }
+ *
+ *     public void run() { // run the service
+ *         try {
+ *             for (; ; ) {
+ *                 pool.execute(new Handler(serverSocket.accept()));
+ *             }
+ *         } catch (IOException ex) {
+ *             pool.shutdown();
+ *         }
+ *     }
+ * }
+ *
+ * class Handler implements Runnable {
+ *     private final Socket socket;
+ *
+ *     Handler(Socket socket) {
+ *         this.socket = socket;
+ *     }
+ *
+ *     public void run() {
+ *         // read and service request on socket
+ *     }
+ * }
+ *
+ * 以下方法分两个阶段关闭ExecutorService ，首先调用shutdown拒绝传入任务，然后调用shutdownNow （如有必要）取消任何延迟任务：
+ * void shutdownAndAwaitTermination(ExecutorService pool) {
+ *   pool.shutdown(); // Disable new tasks from being submitted
+ *   try {
+ *     // Wait a while for existing tasks to terminate
+ *     if (!pool.awaitTermination(60, TimeUnit.SECONDS)) {
+ *       pool.shutdownNow(); // Cancel currently executing tasks
+ *       // Wait a while for tasks to respond to being cancelled
+ *       if (!pool.awaitTermination(60, TimeUnit.SECONDS))
+ *           System.err.println("Pool did not terminate");
+ *     }
+ *   } catch (InterruptedException ie) {
+ *     // (Re-)Cancel if current thread also interrupted
+ *     pool.shutdownNow();
+ *     // Preserve interrupt status
+ *     Thread.currentThread().interrupt();
+ *   }
+ * }
+ *
+ *
+ *
+ */
 public interface ExecutorService extends Executor {
 
     /**
@@ -153,6 +223,9 @@ public interface ExecutorService extends Executor {
      *         or the security manager's {@code checkAccess} method
      *         denies access.
      */
+    // 启动有序关闭，其中执行先前提交的任务，但不会接受新任务。
+    // 如果已经关闭，调用没有额外的效果。
+    // 此方法不等待先前提交的任务完成执行，使用awaitTermination来做到这一点。
     void shutdown();
 
     /**
@@ -178,6 +251,10 @@ public interface ExecutorService extends Executor {
      *         or the security manager's {@code checkAccess} method
      *         denies access.
      */
+    // 尝试停止所有正在执行的任务，停止等待任务的处理，并返回等待执行的任务列表。
+    // 此方法不等待主动执行的任务终止。使用awaitTermination来做到这一点。
+    // 除了尽最大努力停止处理正在执行的任务之外，没有任何保证。
+    // 例如，典型的实现将通过Thread.interrupt取消，因此任何未能响应中断的任务可能永远不会终止。
     List<Runnable> shutdownNow();
 
     /**
@@ -185,6 +262,7 @@ public interface ExecutorService extends Executor {
      *
      * @return {@code true} if this executor has been shut down
      */
+    // 如果此执行程序已关闭，则返回true 。
     boolean isShutdown();
 
     /**
@@ -194,6 +272,8 @@ public interface ExecutorService extends Executor {
      *
      * @return {@code true} if all tasks have completed following shut down
      */
+    // 如果所有任务在关闭后都已完成，则返回true 。
+    // 请注意，除非首先调用了shutdown或shutdownNow ，否则isTerminated永远不会为true 。
     boolean isTerminated();
 
     /**
@@ -207,6 +287,7 @@ public interface ExecutorService extends Executor {
      *         {@code false} if the timeout elapsed before termination
      * @throws InterruptedException if interrupted while waiting
      */
+    // 在关闭请求后阻塞，直到所有任务都完成执行，或者发生超时，或者当前线程被中断，以先发生者为准。
     boolean awaitTermination(long timeout, TimeUnit unit)
         throws InterruptedException;
 
@@ -233,6 +314,9 @@ public interface ExecutorService extends Executor {
      *         scheduled for execution
      * @throws NullPointerException if the task is null
      */
+    // 提交一个返回值的任务以供执行，并返回一个表示该任务待处理结果的 Future。 Future 的get方法将在成功完成后返回任务的结果。
+    // 如果您想立即阻止等待任务，可以使用result = exec.submit(aCallable).get();形式的结构。
+    // 注意： Executors类包含一组方法，可以将一些其他常见的类似闭包的对象（例如java.security.PrivilegedAction ）转换为Callable形式，以便可以提交它们
     <T> Future<T> submit(Callable<T> task);
 
     /**
@@ -248,6 +332,7 @@ public interface ExecutorService extends Executor {
      *         scheduled for execution
      * @throws NullPointerException if the task is null
      */
+    // 提交 Runnable 任务以执行并返回代表该任务的 Future。 Future 的get方法将在成功完成后返回给定的结果。
     <T> Future<T> submit(Runnable task, T result);
 
     /**
@@ -261,6 +346,7 @@ public interface ExecutorService extends Executor {
      *         scheduled for execution
      * @throws NullPointerException if the task is null
      */
+    // 提交 Runnable 任务以执行并返回代表该任务的 Future。 Future 的get方法将在成功完成后返回null 。
     Future<?> submit(Runnable task);
 
     /**
@@ -284,6 +370,8 @@ public interface ExecutorService extends Executor {
      * @throws RejectedExecutionException if any task cannot be
      *         scheduled for execution
      */
+    // 执行给定的任务，返回一个 Futures 列表，在所有完成时保存它们的状态和结果。 Future.isDone对于返回列表的每个元素都是true 。
+    // 请注意，已完成的任务可能已经正常终止，也可能通过引发异常终止。如果在此操作进行时修改了给定的集合，则此方法的结果是不确定的。
     <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
         throws InterruptedException;
 
@@ -315,6 +403,10 @@ public interface ExecutorService extends Executor {
      * @throws RejectedExecutionException if any task cannot be scheduled
      *         for execution
      */
+    /*
+     * 执行给定的任务，返回一个 Futures 列表，在所有完成时保存它们的状态和结果。
+     * 支持超时
+     */
     <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks,
                                   long timeout, TimeUnit unit)
         throws InterruptedException;
@@ -337,6 +429,9 @@ public interface ExecutorService extends Executor {
      * @throws ExecutionException if no task successfully completes
      * @throws RejectedExecutionException if tasks cannot be scheduled
      *         for execution
+     */
+    /*
+     * 执行给定的任务，当其中任意一个执行完毕后（没有抛出异常），其他剩余的任务都取消掉
      */
     <T> T invokeAny(Collection<? extends Callable<T>> tasks)
         throws InterruptedException, ExecutionException;
@@ -363,6 +458,10 @@ public interface ExecutorService extends Executor {
      * @throws ExecutionException if no task successfully completes
      * @throws RejectedExecutionException if tasks cannot be scheduled
      *         for execution
+     */
+    /*
+     * 执行给定的任务，当其中任意一个执行完毕后（没有抛出异常），其他剩余的任务都取消掉
+     * 支持超时
      */
     <T> T invokeAny(Collection<? extends Callable<T>> tasks,
                     long timeout, TimeUnit unit)
