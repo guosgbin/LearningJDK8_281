@@ -91,6 +91,12 @@ package java.util.concurrent;
  * @since 1.5
  * @author Doug Lea
  */
+/*
+ * ScheduledExecutorService 继承 ExecutorService 接口，提供了延迟执行任务和周期执行任务的方法。
+ *
+ * schedule 方法创建具有各种延迟的任务，并返回可用于取消或检查执行的任务对象。
+ * scheduleAtFixedRate 和 scheduleWithFixedDelay 方法创建并执行定期运行的任务，直到取消为止。
+ */
 public interface ScheduledExecutorService extends ExecutorService {
 
     /**
@@ -107,6 +113,9 @@ public interface ScheduledExecutorService extends ExecutorService {
      *         scheduled for execution
      * @throws NullPointerException if command is null
      */
+    /*
+     * 延迟任务，在给定延迟后执行一次任务
+     */
     public ScheduledFuture<?> schedule(Runnable command,
                                        long delay, TimeUnit unit);
 
@@ -122,6 +131,9 @@ public interface ScheduledExecutorService extends ExecutorService {
      * @throws RejectedExecutionException if the task cannot be
      *         scheduled for execution
      * @throws NullPointerException if callable is null
+     */
+    /*
+     * 延迟任务，在给定延迟后执行一次任务，返回 ScheduledFuture
      */
     public <V> ScheduledFuture<V> schedule(Callable<V> callable,
                                            long delay, TimeUnit unit);
@@ -151,6 +163,9 @@ public interface ScheduledExecutorService extends ExecutorService {
      * @throws NullPointerException if command is null
      * @throws IllegalArgumentException if period less than or equal to zero
      */
+    /*
+     * 周期任务，在给定延迟后执行周期任务
+     */
     public ScheduledFuture<?> scheduleAtFixedRate(Runnable command,
                                                   long initialDelay,
                                                   long period,
@@ -177,6 +192,9 @@ public interface ScheduledExecutorService extends ExecutorService {
      *         scheduled for execution
      * @throws NullPointerException if command is null
      * @throws IllegalArgumentException if delay less than or equal to zero
+     */
+    /*
+     * 周期任务，在给定延迟后执行周期任务
      */
     public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command,
                                                      long initialDelay,

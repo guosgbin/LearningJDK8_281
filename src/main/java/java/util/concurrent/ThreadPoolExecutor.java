@@ -1103,8 +1103,11 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      *
      * @param shutdownOK true if should return true if SHUTDOWN
      */
+    // ScheduledThreadPoolExecutor 需要进行状态检查，以便在 shutdown 期间启用正在运行的任务。
     final boolean isRunningOrShutdown(boolean shutdownOK) {
         int rs = runStateOf(ctl.get());
+        // 如果是 RUNNING 直接返回 true，表示需要执行
+        // 假如是 SHUTDOWN 状态，根据入参 shutdownOK 决定是否在这个状态执行任务
         return rs == RUNNING || (rs == SHUTDOWN && shutdownOK);
     }
 

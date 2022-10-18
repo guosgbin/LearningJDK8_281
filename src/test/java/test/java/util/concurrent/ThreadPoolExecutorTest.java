@@ -2,6 +2,7 @@ package test.java.util.concurrent;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -84,5 +85,91 @@ public class ThreadPoolExecutorTest {
                 // 处理...
             }
         }
+    }
+}
+
+interface TaskCallable<T> {
+    T callable(T t);
+}
+
+class TaskResult implements Serializable {
+    private static final long serialVersionUID = 0L;
+    // 任务状态
+    private Integer taskStatus;
+    // 任务消息
+    private String taskMessage;
+    // 任务结果数据
+    private String taskResult;
+
+    public Integer getTaskStatus() {
+        return taskStatus;
+    }
+
+    public void setTaskStatus(Integer taskStatus) {
+        this.taskStatus = taskStatus;
+    }
+
+    public String getTaskMessage() {
+        return taskMessage;
+    }
+
+    public void setTaskMessage(String taskMessage) {
+        this.taskMessage = taskMessage;
+    }
+
+    public String getTaskResult() {
+        return taskResult;
+    }
+
+    public void setTaskResult(String taskResult) {
+        this.taskResult = taskResult;
+    }
+
+    @Override
+    public String toString() {
+        return "TaskResult{" +
+                "taskStatus=" + taskStatus +
+                ", taskMessage='" + taskMessage + '\'' +
+                ", taskResult='" + taskResult + '\'' +
+                '}';
+    }
+}
+
+class TaskHandler implements TaskCallable<TaskResult> {
+
+    @Override
+    public TaskResult callable(TaskResult taskResult) {
+        // 拿到数据后进一步处理
+        System.out.println(taskResult);
+        return null;
+    }
+}
+
+class TaskExecutor implements Runnable {
+    private TaskCallable<TaskResult> taskCallable;
+    private String taskParameter;
+
+    public TaskExecutor(TaskCallable<TaskResult> taskCallable, String taskParameter) {
+        this.taskCallable = taskCallable;
+        this.taskParameter = taskParameter;
+    }
+
+    @Override
+    public void run() {
+        // 一系列业务逻辑，将结果数据封装成 TaskResult 对象并返回
+        TaskResult result = new TaskResult();
+        result.setTaskStatus(1);
+        result.setTaskMessage(this.taskParameter);
+        result.setTaskResult("异步回调成功");
+        taskCallable.callable(result);
+    }
+}
+
+class TaskCalllableTest{
+    public static void main(String[] args) {
+        // 创建一个任务执行后的回调函数
+        TaskCallable<TaskResult> taskCallable = new TaskHandler();
+        TaskExecutor taskExecutor = new TaskExecutor(taskCallable, "测试回调任务");
+        new Thread(taskExecutor).start();
     }
 }
