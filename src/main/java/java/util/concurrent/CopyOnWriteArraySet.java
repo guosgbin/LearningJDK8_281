@@ -93,10 +93,20 @@ import java.util.function.Consumer;
  * @author Doug Lea
  * @param <E> the type of elements held in this collection
  */
+/*
+ * 使用 CopyOnWriteArrayList 实现 set 的一些操作
+ * 它的特性如下：
+ * 1. 适用于数据量很小的集合，读操作远远大于写操作，并且您需要在遍历期间防止线程之间的干扰；
+ * 2. 线程安全；
+ * 3. 写操作的消耗很昂贵，因为都需要复制底层数组；
+ * 4. 迭代器不支持 remove 操作；
+ * 5. 通过迭代器的遍历很快，不会遇到其他线程的干扰。迭代器依赖于构造迭代器时数组的不变快照。
+ */
 public class CopyOnWriteArraySet<E> extends AbstractSet<E>
         implements java.io.Serializable {
     private static final long serialVersionUID = 5457747651344034263L;
 
+    // 该 set 是通过 cow 实现的
     private final CopyOnWriteArrayList<E> al;
 
     /**
@@ -130,6 +140,7 @@ public class CopyOnWriteArraySet<E> extends AbstractSet<E>
      *
      * @return the number of elements in this set
      */
+    // 返回集合大小
     public int size() {
         return al.size();
     }
@@ -257,6 +268,7 @@ public class CopyOnWriteArraySet<E> extends AbstractSet<E>
      * @return {@code true} if this set did not already contain the specified
      *         element
      */
+    // 调用 cow 的不重复添加的方法
     public boolean add(E e) {
         return al.addIfAbsent(e);
     }
