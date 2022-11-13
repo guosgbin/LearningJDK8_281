@@ -110,6 +110,37 @@ package java.util;
  * @since 1.2
  */
 
+/*
+ * 一个｛@link Map｝，它进一步在其键上提供<em>总排序</em>。
+ * 映射根据其键的｛@linkplain Comparable自然排序｝或通常在创建排序映射时提供的｛@link Comparator｝进行排序。
+ * 当迭代排序映射的集合视图（由｛@code entrySet｝、｛@code keySet｝和｛@code values｝方法返回）时，会反映出这种顺序。
+ * 提供了几个附加操作以利用订购。（此接口是｛@link SortedSet｝的地图模拟。）
+ *
+ * <p>插入排序映射的所有键必须实现｛@code Comparable｝接口（或被指定的比较器接受）。
+ * 此外，所有这样的键都必须是<em>相互可比的</em>：｛
+ * @code k1.compareTo（k2）｝（或｛@code comparetor.compare（k1，k2）}）
+ * 不能为排序映射中的任何键｛@code k1｝和｛@code k2｝抛出｛@code ClassCastException｝。
+ * 尝试违反此限制将导致有问题的方法或构造函数调用引发｛@code ClassCastException｝。
+ *
+ * <p>请注意，如果排序映射要正确实现｛@code map｝接口，则排序映射维护的顺序（无论是否提供显式比较器）必须<em>与等于</em>一致。（
+ * 请参见｛@code Comparable｝接口或｛@code Comparator｝接口，以获得与equals＜/em＞一致的＜em＞的精确定义。）之所以如此，
+ * 是因为｛@code Map｝接口是根据｛@code equals｝操作定义的，
+ * 但排序的映射使用其｛@code compareTo｝（或｛@code compare｝）方法执行所有键比较，
+ * 因此该方法认为相等的两个键是，从排序地图的观点来看，相等。
+ * 树映射<em>的行为是</em>定义良好的，即使其排序与等于不一致；它只是未能遵守｛@code Map｝接口的一般约定。
+ *
+ * <p>所有通用排序映射实现类都应该提供我们的“标准”构造函数。
+ * 无法执行此建议尽管接口不能指定所需的构造函数。所有排序映射实现的预期“标准”构造函数为：
+ *
+ * <li>一个void（无参数）构造函数，它创建一个空的排序映射，根据其键的自然顺序进行排序</li>
+ * <li>具有｛@code Comparator｝类型的单个参数的构造函数，该构造函数创建一个根据指定的比较器排序的空排序映射。/li>
+ * <li>具有｛@code Map｝类型的单个参数的构造函数，它创建一个新的映射，该映射具有与其参数相同的键值映射，并根据键的自然顺序进行排序</li>
+ * <li>具有｛@code SortedMap｝类型的单个参数的构造函数，它创建一个新的排序映射，该映射具有与输入排序映射相同的键值映射和相同的排序</li>
+ */
+
+/*
+ * 上面一堆乱七八糟的，大概就是基于 key 来排序的，key 需要实现 Comparable 接口
+ */
 public interface SortedMap<K,V> extends Map<K,V> {
     /**
      * Returns the comparator used to order the keys in this map, or
@@ -119,6 +150,10 @@ public interface SortedMap<K,V> extends Map<K,V> {
      * @return the comparator used to order the keys in this map,
      *         or {@code null} if this map uses the natural ordering
      *         of its keys
+     */
+    /*
+     * 返回指定的 key 的排序 Comparator
+     * 返回 null 表示使用的是自然排序
      */
     Comparator<? super K> comparator();
 
@@ -151,6 +186,9 @@ public interface SortedMap<K,V> extends Map<K,V> {
      *         range, and {@code fromKey} or {@code toKey} lies
      *         outside the bounds of the range
      */
+    /*
+     * 修改返回的集合，也会影响原来的集合
+     */
     SortedMap<K,V> subMap(K fromKey, K toKey);
 
     /**
@@ -178,6 +216,9 @@ public interface SortedMap<K,V> extends Map<K,V> {
      *         restricted range, and {@code toKey} lies outside the
      *         bounds of the range
      */
+    /*
+     * 根据排序规则，小于 toKey 的那些键值对
+     */
     SortedMap<K,V> headMap(K toKey);
 
     /**
@@ -204,6 +245,9 @@ public interface SortedMap<K,V> extends Map<K,V> {
      * @throws IllegalArgumentException if this map itself has a
      *         restricted range, and {@code fromKey} lies outside the
      *         bounds of the range
+     */
+    /*
+     * 根据排序，大于 fromKey 的那些键值对
      */
     SortedMap<K,V> tailMap(K fromKey);
 
@@ -239,6 +283,9 @@ public interface SortedMap<K,V> extends Map<K,V> {
      *
      * @return a set view of the keys contained in this map, sorted in
      *         ascending order
+     */
+    /*
+     * 按照顺序返回
      */
     Set<K> keySet();
 

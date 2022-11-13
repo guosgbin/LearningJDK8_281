@@ -60,6 +60,10 @@ import java.util.function.Function;
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
  */
+
+/**
+ * 保证线程安全和原子性
+ */
 public interface ConcurrentMap<K, V> extends Map<K, V> {
 
     /**
@@ -73,6 +77,9 @@ public interface ConcurrentMap<K, V> extends Map<K, V> {
      * @throws ClassCastException {@inheritDoc}
      * @throws NullPointerException {@inheritDoc}
      * @since 1.8
+     */
+    /*
+     * 获取 key 对应的 value，假如不存在则返回默认值 defaultValue
      */
     @Override
     default V getOrDefault(Object key, V defaultValue) {
@@ -98,6 +105,7 @@ public interface ConcurrentMap<K, V> extends Map<K, V> {
      * @throws NullPointerException {@inheritDoc}
      * @since 1.8
      */
+   // 遍历消费操作
     @Override
     default void forEach(BiConsumer<? super K, ? super V> action) {
         Objects.requireNonNull(action);
@@ -147,6 +155,7 @@ public interface ConcurrentMap<K, V> extends Map<K, V> {
      * @throws IllegalArgumentException if some property of the specified key
      *         or value prevents it from being stored in this map
      */
+     // 不存在就添加
      V putIfAbsent(K key, V value);
 
     /**

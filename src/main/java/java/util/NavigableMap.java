@@ -92,6 +92,31 @@ package java.util;
  * @param <V> the type of mapped values
  * @since 1.6
  */
+
+/*
+ *｛@link SortedMap｝扩展了导航方法，返回给定搜索目标的最接近匹配项。
+ * 方法｛@code lowerEntry｝、｛@code floorEntry｝、｛@code ceilingEntry｝和｛@code higherEntry｝返回｛@代码映射条目｝对象，
+ * 这些对象分别与小于、小于或等于、大于或等于给定键的键相关联，并返回
+ *｛@code null｝，如果没有这样的键。类似地，方法｛@code lowerKey｝、｛@code floorKey｝、｛@code ceilingKey｝和｛@code higherKey}只返回关联的键。
+ * 所有这些方法都是为定位而不是遍历条目而设计的。
+ *
+ *｛@code NavigableMap｝可以按升序或降序键访问和遍历。
+ * ｛@code descentingMap｝方法返回映射的视图，所有关系方法和方向方法的含义都颠倒了。上升操作和视图的性能可能比下降操作和视图更快。
+ * 方法｛@code subMap｝、｛@code headMap｝和｛@代码尾映射｝与类似的｛@code SortedMap｝的方法不同，
+ * 它们接受了描述下限和上限是包含还是排除的附加参数。任何@code NavigableMap｝的子映射都必须实现｛@code NavivableMap}接口。
+ *
+ * <p>此接口还定义了方法｛@code firstEntry｝、｛@code pollFirstEntry｝、｛@code lastEntry}和｛@code pollLastEntry｝，
+ * 这些方法返回和/或移除最小和最大映射（如果存在），否则返回｛@code null｝。
+ *
+ * <p>条目返回方法的实现应返回｛@code Map.entry｝对，表示生成时映射的快照，
+ * 因此通常＜em＞不＜/em＞支持可选的｛@code entry.setValue｝方法。
+ * 但是请注意，可以使用方法｛@code put｝更改关联映射中的映射。
+ */
+
+/*
+ * NavigableMap 提供了定位的一些操作
+ *
+ */
 public interface NavigableMap<K,V> extends SortedMap<K,V> {
     /**
      * Returns a key-value mapping associated with the greatest key
@@ -106,6 +131,9 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
      * @throws NullPointerException if the specified key is null
      *         and this map does not permit null keys
      */
+    /*
+     * 返回与严格小于给定键的最大键关联的键值对，如果没有该键，则返回｛@code null｝。
+     */
     Map.Entry<K,V> lowerEntry(K key);
 
     /**
@@ -119,6 +147,9 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
      *         with the keys currently in the map
      * @throws NullPointerException if the specified key is null
      *         and this map does not permit null keys
+     */
+    /*
+     * 返回与严格小于给定键的最大键关联的键值对，如果没有该键，则返回｛@code null｝。
      */
     K lowerKey(K key);
 
@@ -135,6 +166,9 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
      * @throws NullPointerException if the specified key is null
      *         and this map does not permit null keys
      */
+    /*
+     * 返回与小于或等于给定键的最大键关联的键值映射，如果没有该键，则返回｛@code null｝。
+     */
     Map.Entry<K,V> floorEntry(K key);
 
     /**
@@ -148,6 +182,9 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
      *         with the keys currently in the map
      * @throws NullPointerException if the specified key is null
      *         and this map does not permit null keys
+     */
+    /*
+     * 返回与小于或等于给定键的最大键关联的键，如果没有该键，则返回｛@code null｝。
      */
     K floorKey(K key);
 
@@ -163,6 +200,9 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
      *         with the keys currently in the map
      * @throws NullPointerException if the specified key is null
      *         and this map does not permit null keys
+     */
+    /*
+     * 返回与大于或等于给定键的最小键关联的键值映射，如果没有该键，则返回｛@code null｝。
      */
     Map.Entry<K,V> ceilingEntry(K key);
 
@@ -193,6 +233,9 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
      * @throws NullPointerException if the specified key is null
      *         and this map does not permit null keys
      */
+    /*
+     * 返回与严格大于给定键的最小键关联的键值映射，如果没有该键，则返回｛@code null｝。
+     */
     Map.Entry<K,V> higherEntry(K key);
 
     /**
@@ -216,6 +259,7 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
      * @return an entry with the least key,
      *         or {@code null} if this map is empty
      */
+    // 最小的键
     Map.Entry<K,V> firstEntry();
 
     /**
@@ -225,6 +269,7 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
      * @return an entry with the greatest key,
      *         or {@code null} if this map is empty
      */
+    // 最大的键
     Map.Entry<K,V> lastEntry();
 
     /**
@@ -234,6 +279,7 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
      * @return the removed first entry of this map,
      *         or {@code null} if this map is empty
      */
+    // 移除并返回与此映射中最小键关联的键值映射，如果映射为空，则返回｛@code null｝。
     Map.Entry<K,V> pollFirstEntry();
 
     /**
@@ -243,6 +289,7 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
      * @return the removed last entry of this map,
      *         or {@code null} if this map is empty
      */
+    // 移除并返回与此映射中最大键关联的键值映射，如果映射为空，则返回｛@code null｝。
     Map.Entry<K,V> pollLastEntry();
 
     /**
@@ -259,6 +306,11 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
      * view of {@code m} essentially equivalent to {@code m}.
      *
      * @return a reverse order view of this map
+     */
+    /*
+     * 返回此映射中包含的映射的逆序视图。
+     * 降序地图由该地图支持，因此对地图的更改反映在降序地图中，反之亦然。
+     * 如果在对任一映射的集合视图进行迭代时修改了任一映射（通过迭代器自己的｛@code remove｝操作除外），则迭代的结果是未定义的。
      */
     NavigableMap<K,V> descendingMap();
 
