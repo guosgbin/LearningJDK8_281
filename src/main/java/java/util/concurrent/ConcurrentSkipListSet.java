@@ -91,6 +91,14 @@ import java.util.Spliterator;
  * @param <E> the type of elements maintained by this set
  * @since 1.6
  */
+`/*
+ * 内部创建一个 ConcurrentSkipListMap 对象，所有操作都是委托给 ConcurrentSkipListMap 执行的
+ * 所以其实 ConcurrentSkipListSet 就是一种跳表类型的数据结构，其平均增删改查的时间复杂度均为O(logn)。
+ *
+ * ConcurrentSkipListMap对键值对的要求是均不能为null，
+ * 所以ConcurrentSkipListSet在插入元素的时候，用一个Boolean.TRUE对象（相当于一个值为true的Boolean型对象）作为value，
+ * 同时putIfAbsent可以保证不会存在相同的Key。
+ */
 public class ConcurrentSkipListSet<E>
     extends AbstractSet<E>
     implements NavigableSet<E>, Cloneable, java.io.Serializable {
