@@ -79,6 +79,11 @@ import java.util.Spliterator;
  * @author Doug Lea
  * @param <E> the type of elements held in this collection
  */
+
+/*
+ * 基于数组的阻塞队列，循环数组，队列的长度是有限制的
+ * 关于迭代器部分，比较麻烦，以后想看的话，看这个 ==>> https://blog.csdn.net/qq_43327091/article/details/104401103
+ */
 public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         implements BlockingQueue<E>, java.io.Serializable {
 
@@ -91,15 +96,19 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
     private static final long serialVersionUID = -817911632652898426L;
 
     /** The queued items */
+    // 底层数组
     final Object[] items;
 
     /** items index for next take, poll, peek or remove */
+    // 指向下一次 take，poll，peek 和 remove 的元素
     int takeIndex;
 
     /** items index for next put, offer, or add */
+    // 指向下一次 put，offer 和 add 的元素
     int putIndex;
 
     /** Number of elements in the queue */
+    // 队列中的元素个数
     int count;
 
     /*
@@ -108,12 +117,15 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
      */
 
     /** Main lock guarding all access */
+    // 锁对象
     final ReentrantLock lock;
 
     /** Condition for waiting takes */
+    // 条件队列，当队列空了的时候，需要在这里等待
     private final Condition notEmpty;
 
     /** Condition for waiting puts */
+    // 条件队列，当队列满了的时候，需要在这里等待
     private final Condition notFull;
 
     /**
@@ -154,14 +166,18 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
      * Inserts element at current put position, advances, and signals.
      * Call only when holding lock.
      */
+    // 只有在获取锁的状态才会进这个方法
     private void enqueue(E x) {
         // assert lock.getHoldCount() == 1;
         // assert items[putIndex] == null;
         final Object[] items = this.items;
+        // 添加元素
         items[putIndex] = x;
+        // 环形数组，重置 putIndex 索引为 0
         if (++putIndex == items.length)
             putIndex = 0;
         count++;
+        // 唤醒因为队列没有元素而在 获取元素时阻塞的线程
         notEmpty.signal();
     }
 
@@ -173,14 +189,17 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         // assert lock.getHoldCount() == 1;
         // assert items[takeIndex] != null;
         final Object[] items = this.items;
+        // 获取旧元素
         @SuppressWarnings("unchecked")
         E x = (E) items[takeIndex];
         items[takeIndex] = null;
+        // 环形数组
         if (++takeIndex == items.length)
             takeIndex = 0;
         count--;
         if (itrs != null)
             itrs.elementDequeued();
+        // 唤醒在添加元素的时候，唤醒可能阻塞的入队线程
         notFull.signal();
         return x;
     }
@@ -321,14 +340,17 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
      *
      * @throws NullPointerException if the specified element is null
      */
+    // 入队尾
     public boolean offer(E e) {
         checkNotNull(e);
         final ReentrantLock lock = this.lock;
         lock.lock();
         try {
             if (count == items.length)
+                // 满了
                 return false;
             else {
+                // 未满，入队操作
                 enqueue(e);
                 return true;
             }
@@ -344,6 +366,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
      * @throws InterruptedException {@inheritDoc}
      * @throws NullPointerException {@inheritDoc}
      */
+    // 入队，无限等待
     public void put(E e) throws InterruptedException {
         checkNotNull(e);
         final ReentrantLock lock = this.lock;
@@ -365,19 +388,24 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
      * @throws InterruptedException {@inheritDoc}
      * @throws NullPointerException {@inheritDoc}
      */
+    // 尝试入队尾，等待指定时间
     public boolean offer(E e, long timeout, TimeUnit unit)
         throws InterruptedException {
 
         checkNotNull(e);
         long nanos = unit.toNanos(timeout);
         final ReentrantLock lock = this.lock;
+        // 获取锁，响应中断
         lock.lockInterruptibly();
         try {
+            // 使用 while 循环防止虚假唤醒
             while (count == items.length) {
                 if (nanos <= 0)
                     return false;
+                // 因为队列满了，尝试等待指定时间
                 nanos = notFull.awaitNanos(nanos);
             }
+            // 入队操作
             enqueue(e);
             return true;
         } finally {
@@ -385,6 +413,9 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         }
     }
 
+    /**
+     * 获取并移除队首元素
+     */
     public E poll() {
         final ReentrantLock lock = this.lock;
         lock.lock();
@@ -395,6 +426,9 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         }
     }
 
+    /**
+     * 获取并移除队首元素，无限等待
+     */
     public E take() throws InterruptedException {
         final ReentrantLock lock = this.lock;
         lock.lockInterruptibly();
@@ -407,14 +441,19 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         }
     }
 
+    /**
+     * 获取并移除队首元素，指定等待超时时间
+     */
     public E poll(long timeout, TimeUnit unit) throws InterruptedException {
         long nanos = unit.toNanos(timeout);
         final ReentrantLock lock = this.lock;
+        // 加锁，响应中断
         lock.lockInterruptibly();
         try {
             while (count == 0) {
                 if (nanos <= 0)
                     return null;
+                // 等待指定时间
                 nanos = notEmpty.awaitNanos(nanos);
             }
             return dequeue();
@@ -463,6 +502,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
      * because it may be the case that another thread is about to
      * insert or remove an element.
      */
+    // 剩余元素个数
     public int remainingCapacity() {
         final ReentrantLock lock = this.lock;
         lock.lock();
@@ -490,6 +530,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
      * @param o element to be removed from this queue, if present
      * @return {@code true} if this queue changed as a result of the call
      */
+    // 移除指定元素，就是遍历循环数组啦
     public boolean remove(Object o) {
         if (o == null) return false;
         final Object[] items = this.items;
@@ -822,6 +863,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         /**
          * Node in a linked list of weak iterator references.
          */
+        // 单链表，弱引用
         private class Node extends WeakReference<Itr> {
             Node next;
 
@@ -838,8 +880,10 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         private Node head;
 
         /** Used to expunge stale iterators */
+        // 记录上次探测的结束位置节点，下次从此开始往后探测。
         private Node sweeper = null;
 
+        // 探测范围
         private static final int SHORT_SWEEP_PROBES = 4;
         private static final int LONG_SWEEP_PROBES = 16;
 
@@ -858,15 +902,26 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         void doSomeSweeping(boolean tryHarder) {
             // assert lock.getHoldCount() == 1;
             // assert head != null;
+            // 获取探测方式，probes 代表本次的探测长度
             int probes = tryHarder ? LONG_SWEEP_PROBES : SHORT_SWEEP_PROBES;
+            // o 代表 p 的前一个节点，用于链表中节点的删除
             Node o, p;
+            // 它代表了一次探测中到达的最后一个节点
             final Node sweeper = this.sweeper;
+            /*
+             * passedGo：限制一次遍历
+             * 	若从头开始遍历,passedGo设为true,
+             * 		如果当前结点为null且probes>0可以直接break
+             * 	若从中开始遍历,passedGo设为false,
+             * 		如果当前结点为null且probes>0就会转回到头部继续遍历
+             */
             boolean passedGo;   // to limit search to one full sweep
 
             if (sweeper == null) {
                 o = null;
                 p = head;
                 passedGo = true;
+            // 从上一个线程的终止位置开始向后探测,passedGo = false
             } else {
                 o = sweeper;
                 p = o.next;
@@ -874,9 +929,15 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
             }
 
             for (; probes > 0; probes--) {
+                // 如果遇到结点为空说明遍历到了链表尾
+                // 就需要根据passedGo判断是否继续探测
                 if (p == null) {
+                    // passedGo 为true,从链表头开始探测,那就不需要继续探测,直接break
                     if (passedGo)
                         break;
+                    // passedGo 为false，说明本次遍历是从中间某位置开始，
+                    // 也就是说链表前面有一段是未遍历的，
+                    // 遍历到了尾部需要转回到头部继续遍历
                     o = null;
                     p = head;
                     passedGo = true;
@@ -1021,26 +1082,40 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
      * remove lastItem from the queue if it moved due to an interleaved
      * interior remove while in detached mode.
      */
+    // 需要注意：lastRet、nextIndex、cursor 这三个变量是判断迭代器是否失效的主要依据
+    // （满足 cursor < 0 && nextIndex < 0 && lastRet < 0 时代表迭代器失效
+    // DETACHED：专门用于prevTakeIndex ，isDetached方法通过其来判断迭代器状态是否失效
+    // NONE：用于三个下标变量：cursor，nextIndex，lastRet；这三个下标变量用于迭代功能的实现。表明该位置数据不可用或未定义
+    // REMOVED：用于 lastRet 与 nextIndex。表明数据过时或被删除
     private class Itr implements Iterator<E> {
         /** Index to look for new nextItem; NONE at end */
+        // nextIndex 的下一个位置的索引
         private int cursor;
 
         /** Element to be returned by next call to next(); null if none */
+        // 调用 next() 方法返回的元素
         private E nextItem;
 
         /** Index of nextItem; NONE if none, REMOVED if removed elsewhere */
+        // nextItem 元素的索引
         private int nextIndex;
 
         /** Last element returned; null if none or not detached. */
+        // 上一次返回的元素
         private E lastItem;
 
         /** Index of lastItem, NONE if none, REMOVED if removed elsewhere */
+        // lastItem 的索引
         private int lastRet;
 
         /** Previous value of takeIndex, or DETACHED when detached */
+        // 代表本次遍历开始的索引，每此 next 都会进行修正
         private int prevTakeIndex;
 
         /** Previous value of iters.cycles */
+        // Itrs 管理 Itr 链，它里面有个变量 cycles 记录 takeIndex 回到 0 位置的次数，迭代器的 prevCycles 存储该值
+        // 需要注意：这两个变量存储的值可能过时（在创建迭代器之后未立即使用，而对数组进行了修改），
+        // 迭代器多处操作前都会通过这两个值来判断数据是否过时，以做相应的处理。
         private int prevCycles;
 
         /** Special index value indicating "not available" or "undefined" */
@@ -1058,6 +1133,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         Itr() {
             // assert lock.getHoldCount() == 0;
             lastRet = NONE;
+            // 获取 ArrayBlockingQueue 全局的锁对象
             final ReentrantLock lock = ArrayBlockingQueue.this.lock;
             lock.lock();
             try {
@@ -1065,18 +1141,28 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
                     // assert itrs == null;
                     cursor = NONE;
                     nextIndex = NONE;
+                    // 失效状态
                     prevTakeIndex = DETACHED;
                 } else {
+                    // 获取 ArrayBlockingQueue 的 takeIndex，也就是下次 take 的元素
                     final int takeIndex = ArrayBlockingQueue.this.takeIndex;
+                    // 初始化遍历起始索引 prevTakeIndex 为队头索引takeIndex
                     prevTakeIndex = takeIndex;
+                    // 下一个遍历元素 nextItem 为队头元素 itemAt(takeIndex)
+                    // nextIndex 为 nextItem 的索引
                     nextItem = itemAt(nextIndex = takeIndex);
+                    // 获取 nextIndex 下一个元素的索引
                     cursor = incCursor(takeIndex);
                     if (itrs == null) {
+                        // itrs为链表的首节点，如果首节点为null，说明当前队列没有迭代器
                         itrs = new Itrs(this);
                     } else {
+                        // 如果有的，就把当前迭代器节点放到链表的最前面
                         itrs.register(this); // in this order
+                        // 清除链表中无效的迭代器节点
                         itrs.doSomeSweeping(false);
                     }
+                    // 当前迭代器记录最新的轮数
                     prevCycles = itrs.cycles;
                     // assert takeIndex >= 0;
                     // assert prevTakeIndex == takeIndex;
@@ -1097,6 +1183,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
             // assert lock.getHoldCount() == 1;
             if (++index == items.length)
                 index = 0;
+            // index == putIndex 成立则表示着迭代结束
             if (index == putIndex)
                 index = NONE;
             return index;
@@ -1183,6 +1270,10 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
          * fields (i.e. nextItem) that are not modified by update operations
          * triggered by queue modifications.
          */
+        /*
+         * 出于性能原因，我们不希望在常见情况下获得 hasNext 中的锁。
+         * 为此，我们只访问未被队列修改触发的更新操作修改的字段（即nextItem）。
+         */
         public boolean hasNext() {
             // assert lock.getHoldCount() == 0;
             if (nextItem != null)
@@ -1215,6 +1306,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
 
         public E next() {
             // assert lock.getHoldCount() == 0;
+            // 直接从变量中拿，不从队列中获取
             final E x = nextItem;
             if (x == null)
                 throw new NoSuchElementException();
@@ -1228,8 +1320,12 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
                 lastRet = nextIndex;
                 final int cursor = this.cursor;
                 if (cursor >= 0) {
+                    // 重新更新nextItem，如果先执行next方法，之后执行了两次take方法
+                    // 第二次即便take已经把第二个元素取出了，这个时候再调用next，依然为
+                    // 执行take方法之前的第二个元素
                     nextItem = itemAt(nextIndex = cursor);
                     // assert nextItem != null;
+                    // 更新游标
                     this.cursor = incCursor(cursor);
                 } else {
                     nextIndex = NONE;

@@ -229,6 +229,7 @@ public interface BlockingQueue<E> extends Queue<E> {
      * @throws IllegalArgumentException if some property of the specified
      *         element prevents it from being added to this queue
      */
+    // 插入元素到队尾，如果没有空间，则一直阻塞等待直到有空间可以插入元素
     void put(E e) throws InterruptedException;
 
     /**
@@ -249,6 +250,7 @@ public interface BlockingQueue<E> extends Queue<E> {
      * @throws IllegalArgumentException if some property of the specified
      *         element prevents it from being added to this queue
      */
+    // 插入元素到队尾，如果没有空间，则最多会等待指定时间
     boolean offer(E e, long timeout, TimeUnit unit)
         throws InterruptedException;
 
@@ -259,6 +261,7 @@ public interface BlockingQueue<E> extends Queue<E> {
      * @return the head of this queue
      * @throws InterruptedException if interrupted while waiting
      */
+    // 移除队首元素，假如没有元素，则一直阻塞直到有元素
     E take() throws InterruptedException;
 
     /**
@@ -273,6 +276,7 @@ public interface BlockingQueue<E> extends Queue<E> {
      *         specified waiting time elapses before an element is available
      * @throws InterruptedException if interrupted while waiting
      */
+    // 移除队首元素，假如没有元素，则最多阻塞等待指定时间
     E poll(long timeout, TimeUnit unit)
         throws InterruptedException;
 
