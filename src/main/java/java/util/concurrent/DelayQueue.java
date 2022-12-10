@@ -67,10 +67,19 @@ import java.util.*;
  * @author Doug Lea
  * @param <E> the type of elements held in this collection
  */
+/*
+ * 无界的阻塞队列，基于 Delayed 元素，只有元素的过期时间到了才会从优先队列中移除
+ * 堆顶的元素是最快过期的元素
+ * 假如没有元素过期，此时 poll 元素就是 null
+ *
+ * 元素过期指的是 getDelay 方法返回 0 或者负数
+ */
 public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
     implements BlockingQueue<E> {
 
+    // 锁对象
     private final transient ReentrantLock lock = new ReentrantLock();
+    // 优先队列
     private final PriorityQueue<E> q = new PriorityQueue<E>();
 
     /**
@@ -89,12 +98,24 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
      * signalled.  So waiting threads must be prepared to acquire
      * and lose leadership while waiting.
      */
+    /*
+     * 这个属性表示为了等待堆顶元素的线程
+     * 当一个线程成为 leader 时，它只等待下一个延迟的过去，而其他线程则无限期地等待。
+     * leade 线程在 take 方法和 poll 方法之前必须唤醒其他线程，除非其他线程变成 leader 了
+     *
+     * 每当队列的头部被具有较早到期时间的元素替换时，leader 将通过重置为空而无效，
+     * 并向一些等待线程（但不一定是当前 leader ）发出信号。因此，等待线程必须做好准备，以便在等待时获得和失去 leader。
+     */
     private Thread leader = null;
 
     /**
      * Condition signalled when a newer element becomes available
      * at the head of the queue or a new thread may need to
      * become leader.
+     */
+    /*
+     * 条件队列，在下面情况需要唤醒线程
+     * 当一个新的元素变成堆顶元素，或者新的线程变成 leader 了
      */
     private final Condition available = lock.newCondition();
 
@@ -133,12 +154,26 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
      * @return {@code true}
      * @throws NullPointerException if the specified element is null
      */
+    // 延迟队列元素入队
     public boolean offer(E e) {
         final ReentrantLock lock = this.lock;
         lock.lock();
         try {
+            // 插入优先队列
             q.offer(e);
+            // 假如堆顶元素就是当前刚插入的元素，
             if (q.peek() == e) {
+                /*
+                 * 两种情况，
+                 * 1. 当前任务是第一个添加到堆内的任务
+                 * 2. 当前任务不是第一个添加到堆内的任务，但是由于它的优先级比较高，冒泡到了堆顶，
+                 *
+                 * case1. 当前任务是第一个添加到堆内的任务，当前任务加入到 queue 之前，take()线程会直接到 available不设置超时时间的挂起，
+                 *       因为是第一个加入的任务，此时 leader 是 null 的，调用 signal 方法会唤醒一个线程去消费
+                 * case2. 当前任务优先级比较高，冒泡到堆顶了，因为之前堆顶的元素可能占用了 leader 属性，leader  线程可能正在超时挂起呢
+                 *       这时需要将其置为 null，并唤醒 leader 线程，唤醒之后就会检查堆顶，如果堆顶任务可以消费，则直接获取走了
+                 *       否则继续成为 leader 线程继续等待
+                 */
                 leader = null;
                 available.signal();
             }
@@ -186,6 +221,7 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
         try {
             E first = q.peek();
             if (first == null || first.getDelay(NANOSECONDS) > 0)
+                // 说明没有元素，或者堆顶元素还未过期
                 return null;
             else
                 return q.poll();
@@ -201,27 +237,58 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
      * @return the head of this queue
      * @throws InterruptedException {@inheritDoc}
      */
+    /*
+     * 阻塞出队
+     *
+     * 1.先看一个最简单的情况，队列中没有元素，那么当前线程就直接无限等待了；
+     * 2.假如队列中有元素，那么需要获取堆顶元素的延迟时间，假如堆顶元素已经到时间了，直接 poll 移出队列；
+     * 3.假如队列中有元素，那么需要获取堆顶元素的延迟时间，假如堆顶元素还未到时间
+     *      3.1 假如已经有线程在等待堆顶元素到期，也就是 leader 不是 null 的情况，此时当前线程需要无限等待；
+     *      3.2 假如目前没有线程在等待堆顶元素到期，也就是 leader 是 null，当前线程需要占用 leader 字段，并阻塞等待到堆顶元素过期
+     *
+     * 好了说了一堆阻塞等待的情况，那么什么时候会唤醒这些线程呢？
+     * 最简单的就是 leader 线程阻塞时间到后自己醒来，醒来之后继续循环判断堆顶元素是否满足出队条件即可；
+     * 那么那些无限等待的线程什么时候唤醒呢？
+     *
+     *
+     */
     public E take() throws InterruptedException {
         final ReentrantLock lock = this.lock;
         lock.lockInterruptibly();
         try {
+            // 自旋，退出自旋说明获取到任务了，或者收到了中断异常
             for (;;) {
+                // 查看堆顶元素
                 E first = q.peek();
+                // case 堆顶没有元素，当前线程需要在此处无限等待
                 if (first == null)
                     available.await();
+                // case 堆顶有元素
                 else {
+                    // 获取堆顶元素的延迟时间
                     long delay = first.getDelay(NANOSECONDS);
                     if (delay <= 0)
+                        // 已经过期了，则调用 poll 移出元素
                         return q.poll();
+                    // 走到这里，说明堆顶元素还未到期
                     first = null; // don't retain ref while waiting
                     if (leader != null)
+                        // 无限等待，
+                        // 有堆顶任务，会在最下面的 finally 块里唤醒
+                        // 没有堆顶任务，会在添加 offer 任务的时候唤醒
                         available.await();
                     else {
+                        // 走到这里，说明 leader 还未被占用，当前线程占用 leader
                         Thread thisThread = Thread.currentThread();
                         leader = thisThread;
                         try {
+                            // 注意，这整块代码都在锁里面的
+                            // 等待指定时间，这个 delay 是堆顶任务要执行相对时间
+                            // 等待指定时间后会自动唤醒，也可能是 offer 了一个优先级更高的任务，这时也会唤醒这里的
+                            // 从这里醒来肯定是拿到锁了的
                             available.awaitNanos(delay);
                         } finally {
+                            // 如果唤醒后，leader 还是当前线程，需要置空
                             if (leader == thisThread)
                                 leader = null;
                         }
@@ -230,6 +297,7 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
             }
         } finally {
             if (leader == null && q.peek() != null)
+                // 说明队列中还有下一个等待者，需要唤醒，让他去尝试获取最新的堆顶节点
                 available.signal();
             lock.unlock();
         }
