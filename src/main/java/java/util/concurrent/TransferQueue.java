@@ -65,6 +65,23 @@ package java.util.concurrent;
  * @author Doug Lea
  * @param <E> the type of elements held in this collection
  */
+
+/*
+ * 一种阻塞队列
+ * 生产者可能会等待消费者接收数据
+ *
+ * TransferQueue 可能在消息传递的应用程序中很有用
+ * 其中生产者有时（使用方法｛@link#transfer｝）等待消费者调用｛@code take｝或｛@code poll｝接收元素，
+ * 而在其他时候（通过方法｛@code put｝）对元素进行排队，而不等待接收。
+ *
+ * #tryTransfer(Object) 是不阻塞的
+ * #tryTransfer(Object,long,TimeUnit) time-out 超时等待
+ * 可以通过 #hasWaitingConsumer 方法查询是否有线程在等待消费，这和 peek 操作完全相反
+ *
+ * 和其他阻塞队列一样，TransferQueue可能会有容量限制。
+ * 如果是这样，则尝试的 transfer 操作可能最初阻塞等待可用空间，随后阻塞等待消费者接收。
+ * 注意，在 0 容量的队列中，例如｛@link SynchronousQueue｝，｛@code put｝和｛@code transfer｝实际上是同义词。
+ */
 public interface TransferQueue<E> extends BlockingQueue<E> {
     /**
      * Transfers the element to a waiting consumer immediately, if possible.
@@ -82,6 +99,12 @@ public interface TransferQueue<E> extends BlockingQueue<E> {
      * @throws NullPointerException if the specified element is null
      * @throws IllegalArgumentException if some property of the specified
      *         element prevents it from being added to this queue
+     */
+    /*
+     * 假如有消费者在等待（take 方法或者 poll(long,TimeUnit)），立刻传递元素到已经在等待的消费者
+     * 假如没有消费者在等待，则返回 false，不进行入队操作，也就意味着直接丢弃尝试入队的数据
+     *
+     * 感觉和 ReentrantLock#tryLock 有点像
      */
     boolean tryTransfer(E e);
 
@@ -101,6 +124,10 @@ public interface TransferQueue<E> extends BlockingQueue<E> {
      * @throws NullPointerException if the specified element is null
      * @throws IllegalArgumentException if some property of the specified
      *         element prevents it from being added to this queue
+     */
+    /*
+     * 假如有消费者在等待（take 方法或者 poll(long,TimeUnit)），立刻传递元素到已经在等待的消费者
+     * 假如没有消费者在等待，当前生产者需要等待直到一个消费者接收数据
      */
     void transfer(E e) throws InterruptedException;
 
@@ -131,6 +158,12 @@ public interface TransferQueue<E> extends BlockingQueue<E> {
      * @throws IllegalArgumentException if some property of the specified
      *         element prevents it from being added to this queue
      */
+    /*
+     * 假如有消费者在等待，立刻传递元素到已经在等待的消费者
+     * 假如没有消费者在等待，等待指定时间后，假如还没有消费者在等待，则返回 false，不进行入队操作
+     *
+     * 感觉和 ReentrantLock#tryLock 有点像
+     */
     boolean tryTransfer(E e, long timeout, TimeUnit unit)
         throws InterruptedException;
 
@@ -141,6 +174,10 @@ public interface TransferQueue<E> extends BlockingQueue<E> {
      * The return value represents a momentary state of affairs.
      *
      * @return {@code true} if there is at least one waiting consumer
+     */
+    /*
+     * 返回 true 表示至少有一个消费者在等待获取元素，一般是消费者线程调用 take 或者 poll 方法
+     * 这个返回值表示某个时候瞬时的状态
      */
     boolean hasWaitingConsumer();
 
@@ -156,6 +193,13 @@ public interface TransferQueue<E> extends BlockingQueue<E> {
      * {@link #hasWaitingConsumer}.
      *
      * @return the number of consumers waiting to receive elements
+     */
+    /*
+     * 获取有多少个消费者在 take 或者 poll 显示等待
+     * 这是一个估计值（近似值）
+     * 可能是错误估计，消费者可能已经完成获取元素或者放弃等待了。
+     * 这个值可以在监控的时候有用，
+     * 此方法的实现可能明显慢于｛@link#hasWaitingConsumer｝的实现。 ？ 这句话没懂
      */
     int getWaitingConsumerCount();
 }
